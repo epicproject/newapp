@@ -643,7 +643,7 @@ npx wrangler deploy</pre>
     // ?hold=1 keeps it cued until the app says play (so the next video can be made ready while the current one is shown).
     var FEED = /[?&]feed=1/.test(location.search), HOLD = /[?&]hold=1/.test(location.search);
     if (FEED) { cfg.ap = 1; cfg.lp = 1; cfg.ct = 0; cfg.l = ''; }
-    var MUTE0 = !!(cfg.mt || (cfg.ap && !FEED)), wantPlay = !!cfg.ap && !HOLD, isReady = false, userPaused = false;
+    var MUTE0 = !!(cfg.mt || (cfg.ap && !FEED)), wantPlay = !!cfg.ap && !HOLD, isReady = false, userPaused = false, warming = false;
 
     var ctl = mk('div', 'ctl'), bPlay = mk('button', '', '▶'), seek = mk('input'), tm = mk('span', 'tm', '0:00 / ' + fmtTime(E0 - S0)),
         bMute = mk('button', '', '🔊'), bFs = mk('button', '', '⛶'), big = mk('div', 'big'), bigIn = mk('span', '', '▶');
@@ -734,8 +734,14 @@ npx wrangler deploy</pre>
         pl = new YT.Player(inner, { videoId: yt, width: '100%', height: '100%',
           playerVars: { controls: 0, disablekb: 1, fs: 0, modestbranding: 1, rel: 0, playsinline: 1, iv_load_policy: 3, start: Math.floor(S0), end: Math.ceil(E0), autoplay: (wantPlay && !adPending) ? 1 : 0, mute: MUTE0 ? 1 : 0, loop: 0 },
           events: {
-            onReady: function () { ready = true; var d = pl.getDuration(); if (d > 1) E0 = Math.min(E0, d); /* no seekTo here: on a not-yet-started video it would START playing; the player is already cued at 'start' */ if (MUTE0) pl.mute(); isReady = true; if (wantPlay) startNow(); sync(); },
-            onStateChange: function (e) { if (e.data === 0) atEnd(); sync(); },
+            onReady: function () { ready = true; var d = pl.getDuration(); if (d > 1) E0 = Math.min(E0, d); /* no seekTo here: on a not-yet-started video it would START playing; the player is already cued at 'start' */ if (MUTE0) pl.mute(); isReady = true;
+              if (wantPlay) startNow();
+              else if (HOLD) { warming = true; pl.mute(); pl.playVideo(); }      // held clip (the next one in the phone feed): start it silently so it is already buffered, then stop it again
+              sync(); },
+            onStateChange: function (e) {
+              if (warming && e.data === 1) { warming = false; if (wantPlay) { if (!MUTE0) pl.unMute(); } else { pl.pauseVideo(); pl.seekTo(S0, true); } }
+              if (e.data === 0) atEnd(); sync();
+            },
             onError: function () { showError(); }
           } });
       });
@@ -816,7 +822,7 @@ npx wrangler deploy</pre>
     // The app (or any page that holds this player) can steer it: postMessage({hw: 'play' | 'pause' | 'toggle' | 'mute' | 'unmute'}).
     window.addEventListener('message', function (e) {
       var d = e.data; if (!d || typeof d.hw !== 'string') return;
-      if (d.hw === 'play') { userPaused = false; wantPlay = true; if (isReady && !eng.playing()) startNow(); }
+      if (d.hw === 'play') { userPaused = false; wantPlay = true; if (FEED && !MUTE0 && eng.muted()) eng.mute(false); if (isReady && !eng.playing()) startNow(); }
       else if (d.hw === 'pause') { wantPlay = false; eng.pause(); }
       else if (d.hw === 'toggle') toggle();
       else if (d.hw === 'mute') eng.mute(true); else if (d.hw === 'unmute') eng.mute(false);
