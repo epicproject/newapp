@@ -124,6 +124,12 @@
   .mtabs button.on { border-color: var(--acc); background: #eff6ff; box-shadow: 0 0 0 2px rgba(37,99,235,.18); }
   .mtabs button:disabled { opacity: .4; cursor: not-allowed; }
   #mCropWrap { cursor: crosshair; }
+  #bSrc { min-height: 96px; }
+  .brow { display: grid; grid-template-columns: 1fr 64px 64px auto; gap: 6px; align-items: center; padding: 8px; margin-top: 6px; border: 1px solid var(--line); border-radius: 8px; background: #fff; }
+  .brow .src { grid-column: 1 / -1; font-size: 11px; color: var(--mut); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .brow input { min-width: 0; padding: 5px 7px; } .brow .bad { color: #dc2626; font-size: 12px; grid-column: 1 / -1; }
+  .brow button { font: inherit; font-size: 12px; padding: 4px 8px; border: 1px solid var(--line); background: #fff; border-radius: 6px; cursor: pointer; }
+  .brow button:hover { border-color: var(--acc); color: var(--acc); }
   @media (max-width: 760px) { #mediaCard { grid-column: auto; } }
   .mrow { display: grid; grid-template-columns: 96px 1fr 92px 120px; gap: 8px; align-items: center; margin-bottom: 8px; font-size: 14px; }
   .mrow input[type=text] { padding: 6px 8px; }
@@ -322,6 +328,21 @@ npx wrangler deploy</pre>
       <div class="out"><label>ID (use with embed.js or in the Android app) <button class="copy" data-c="mOutId">Copy</button></label><textarea id="mOutId" readonly style="min-height:48px"></textarea></div>
       <div class="out"><label>iframe embed code <button class="copy" data-c="mOutE">Copy</button></label><textarea id="mOutE" readonly></textarea></div>
       <div class="out"><label>embed.js snippet <button class="copy" data-c="mOutJs">Copy</button></label><textarea id="mOutJs" readonly></textarea></div>
+      <h2 style="margin-top:18px">📚 Many sources at once &rarr; database</h2>
+      <p class="hint" style="margin:0 0 8px">One link per line (YouTube, .mp4, .webm, .mp3 …). Every line becomes its own clip with the default Start / End below, and with the size, autoplay and ads chosen above. Then save them all in the database that the Hash Video app and the video platforms read.</p>
+      <textarea id="bSrc" spellcheck="false" placeholder="https://youtu.be/xxxxxxxxxxx&#10;https://example.com/clip.mp4&#10;https://example.com/song.mp3"></textarea>
+      <div class="mrow" style="grid-template-columns:96px 1fr 1fr"><label>Default clip</label><input type="text" id="bStart" value="0:00" aria-label="Default start"><input type="text" id="bEnd" value="0:30" aria-label="Default end"></div>
+      <div class="row two"><label for="bCat">Category</label><input type="text" id="bCat" maxlength="40" placeholder="optional, e.g. Music"></div>
+      <div class="mopts"><button type="button" class="btn" id="bMake">Make all hash URLs</button><button type="button" class="btn" id="bCopy">Copy all IDs</button><span class="hint" id="bInfo"></span></div>
+      <div id="bList"></div>
+      <div class="adbox" style="margin-top:10px"><b>Database on GitHub</b>
+        <div class="row two"><label for="gRepo">Repository</label><input type="text" id="gRepo" autocomplete="off"></div>
+        <div class="row two"><label for="gFile">File</label><input type="text" id="gFile" value="videos.json" autocomplete="off"></div>
+        <div class="row two"><label for="gTok">Access token</label><input type="password" id="gTok" autocomplete="off" placeholder="github_pat_… (only for this repository, Contents: read and write)"></div>
+        <div class="mopts"><label><input type="checkbox" id="gRem" checked> Remember the token in this browser</label></div>
+        <div class="hint">The token is typed only here and is sent only to api.github.com. Create it at GitHub → Settings → Developer settings → Fine-grained tokens, for the one repository, permission "Contents: Read and write".</div>
+        <div class="mopts"><button type="button" class="btn" id="bSaveAll">💾 Save all to database</button><button type="button" class="btn" id="bSaveOne">Save the clip above</button></div>
+        <div class="hint" id="bMsg"></div></div>
       <div class="hint">The link only plays this clip, but the original file is still downloadable by anyone who finds its address. For a truly private cut, upload an already-trimmed copy.</div>
     </section>
   </div>
@@ -618,6 +639,11 @@ npx wrangler deploy</pre>
     var AD = cfg.ad || {}, adPre = AD.v, adBan = AD.b, adCta = AD.c;
     var box = mk('div', 'mp' + (isAudio ? ' audio' : '')); box.tabIndex = 0; box.style.borderRadius = cfg.r + 'px';
     var S0 = cfg.s, E0 = cfg.e, ended = false, endTimer = 0;
+    // Feed mode (the phone app, ?feed=1): a full-screen clip that starts with sound, loops, and shows nothing on top of the video.
+    // ?hold=1 keeps it cued until the app says play (so the next video can be made ready while the current one is shown).
+    var FEED = /[?&]feed=1/.test(location.search), HOLD = /[?&]hold=1/.test(location.search);
+    if (FEED) { cfg.ap = 1; cfg.lp = 1; cfg.ct = 0; cfg.l = ''; }
+    var MUTE0 = !!(cfg.mt || (cfg.ap && !FEED)), wantPlay = !!cfg.ap && !HOLD, isReady = false, userPaused = false;
 
     var ctl = mk('div', 'ctl'), bPlay = mk('button', '', '▶'), seek = mk('input'), tm = mk('span', 'tm', '0:00 / ' + fmtTime(E0 - S0)),
         bMute = mk('button', '', '🔊'), bFs = mk('button', '', '⛶'), big = mk('div', 'big'), bigIn = mk('span', '', '▶');
@@ -626,7 +652,7 @@ npx wrangler deploy</pre>
     big.appendChild(bigIn);
     ctl.appendChild(bPlay); ctl.appendChild(seek); ctl.appendChild(tm); ctl.appendChild(bMute);
     if (!isAudio && document.fullscreenEnabled) ctl.appendChild(bFs);
-    if (cfg.l) box.appendChild(mk('div', 'ttl', cfg.l));
+    if (cfg.l && !FEED) box.appendChild(mk('div', 'ttl', cfg.l));
 
     // ---------------- ads ----------------
     function openAd(url, kind) { if (url) window.open(url, '_blank', 'noopener,noreferrer'); track('click', wid + '.ad-' + kind); }
@@ -670,7 +696,7 @@ npx wrangler deploy</pre>
       if (!adPending || adRunning) return;
       adRunning = true; adLayer.style.display = 'block';
       if (eng.playing()) eng.pause();
-      adVid.muted = !!(cfg.ap || cfg.mt);
+      adVid.muted = MUTE0;
       var pr = adVid.play(); if (pr && pr.catch) pr.catch(function () { finishAd(false); });
       track('view', wid + '.ad-pre');
     }
@@ -706,9 +732,9 @@ npx wrangler deploy</pre>
       };
       loadYT(function () {
         pl = new YT.Player(inner, { videoId: yt, width: '100%', height: '100%',
-          playerVars: { controls: 0, disablekb: 1, fs: 0, modestbranding: 1, rel: 0, playsinline: 1, iv_load_policy: 3, start: Math.floor(S0), end: Math.ceil(E0), autoplay: (cfg.ap && !adPending) ? 1 : 0, mute: (cfg.ap || cfg.mt) ? 1 : 0, loop: 0 },
+          playerVars: { controls: 0, disablekb: 1, fs: 0, modestbranding: 1, rel: 0, playsinline: 1, iv_load_policy: 3, start: Math.floor(S0), end: Math.ceil(E0), autoplay: (wantPlay && !adPending) ? 1 : 0, mute: MUTE0 ? 1 : 0, loop: 0 },
           events: {
-            onReady: function () { ready = true; var d = pl.getDuration(); if (d > 1) E0 = Math.min(E0, d); /* no seekTo here: on a not-yet-started video it would START playing; the player is already cued at 'start' */ if (cfg.mt || cfg.ap) pl.mute(); if (cfg.ap) { if (adPending) startPreroll(); else pl.playVideo(); } sync(); },
+            onReady: function () { ready = true; var d = pl.getDuration(); if (d > 1) E0 = Math.min(E0, d); /* no seekTo here: on a not-yet-started video it would START playing; the player is already cued at 'start' */ if (MUTE0) pl.mute(); isReady = true; if (wantPlay) startNow(); sync(); },
             onStateChange: function (e) { if (e.data === 0) atEnd(); sync(); },
             onError: function () { showError(); }
           } });
@@ -717,7 +743,7 @@ npx wrangler deploy</pre>
     } else {                                      // ---- a media file (mp4 / webm / mp3 / m4a / ogg / wav ...)
       var media = document.createElement(isAudio ? 'audio' : 'video');
       media.preload = 'auto'; media.playsInline = true; media.disablePictureInPicture = true; media.setAttribute('controlslist', 'nodownload noplaybackrate');
-      media.muted = !!(cfg.mt || cfg.ap);
+      media.muted = MUTE0;
       media.addEventListener('contextmenu', function (e) { e.preventDefault(); });
       media.src = cfg.m + (cfg.m.indexOf('#') < 0 ? '#t=' + S0 + ',' + E0 : '');   // the browser itself also starts at s and stops at e
       eng = {
@@ -732,7 +758,7 @@ npx wrangler deploy</pre>
         var d = media.duration;
         if (isFinite(d) && d > 0) { E0 = Math.min(E0, d); S0 = Math.min(S0, Math.max(0, E0 - 0.1)); }
         eng.seek(S0); sync();
-        if (cfg.ap) { if (adPending) startPreroll(); else eng.play(); }
+        isReady = true; if (wantPlay) startNow();
       });
       ['timeupdate', 'play', 'pause', 'seeked', 'volumechange'].forEach(function (n) { media.addEventListener(n, sync); });
       media.addEventListener('ended', function () { atEnd(); sync(); });
@@ -743,18 +769,20 @@ npx wrangler deploy</pre>
     box.appendChild(big); if (cfg.ct) box.appendChild(ctl);
     if (adLayer) box.appendChild(adLayer);
 
+    function startNow() { if (adPending) startPreroll(); else eng.play(); }
     function showError() { if (!box.querySelector('.msg')) box.appendChild(mk('div', 'msg', 'This media could not be loaded.')); }
     function span() { return Math.max(0.1, E0 - S0); }
     function atEnd() {                            // reached the end of the clip: loop, or stop (nothing after e is ever played)
       if (cfg.lp) { eng.seek(S0); eng.play(); } else { eng.pause(); eng.seek(Math.max(S0, E0 - 0.05)); ended = true; }
     }
     function sync() {
+      // (a YouTube video that is only cued must never be seeked here: seeking would start it)
       var t = eng.time(), playing = eng.playing();
       if (playing && t >= E0 - 0.04) { atEnd(); t = eng.time(); playing = eng.playing(); }
-      else if (t < S0 - 0.3 || t > E0 + 0.3) { t = Math.min(Math.max(t, S0), Math.max(S0, E0 - 0.05)); eng.seek(t); }   // outside the clip: pull back in
+      else if ((playing || !yt) && (t < S0 - 0.3 || t > E0 + 0.3)) { t = Math.min(Math.max(t, S0), Math.max(S0, E0 - 0.05)); eng.seek(t); }   // outside the clip: pull back in
       var f = Math.min(1, Math.max(0, (t - S0) / span()));
       seek.value = Math.round(f * 1000); tm.textContent = fmtTime(t - S0) + ' / ' + fmtTime(span());
-      bPlay.textContent = playing ? '⏸' : (ended ? '↻' : '▶'); big.style.display = playing ? 'none' : 'flex'; bigIn.textContent = ended ? '↻' : '▶';
+      bPlay.textContent = playing ? '⏸' : (ended ? '↻' : '▶'); big.style.display = (playing || (FEED && !userPaused)) ? 'none' : 'flex'; bigIn.textContent = ended ? '↻' : '▶';
       bMute.textContent = eng.muted() ? '🔇' : '🔊';
       adTick(t, playing);
       // a timer that fires right at the end of the clip, so not even a fraction of a second is played beyond it
@@ -763,11 +791,11 @@ npx wrangler deploy</pre>
     }
     function toggle() {
       if (adRunning) return;
-      if (eng.playing()) { eng.pause(); }
+      if (eng.playing()) { userPaused = true; eng.pause(); }
       else {
         if (adPending) { track('click', wid); startPreroll(); return; }       // the ad plays first, the clip follows
         if (ended || eng.time() >= E0 - 0.1 || eng.time() < S0) { eng.seek(S0); ended = false; }
-        eng.play(); track('click', wid);          // every press of Play counts as a click in the Monitor
+        userPaused = false; eng.play(); track('click', wid);          // every press of Play counts as a click in the Monitor
       }
       setTimeout(sync, 50);
     }
@@ -785,6 +813,15 @@ npx wrangler deploy</pre>
     root.appendChild(box);
     sync();
     track('view', wid);
+    // The app (or any page that holds this player) can steer it: postMessage({hw: 'play' | 'pause' | 'toggle' | 'mute' | 'unmute'}).
+    window.addEventListener('message', function (e) {
+      var d = e.data; if (!d || typeof d.hw !== 'string') return;
+      if (d.hw === 'play') { userPaused = false; wantPlay = true; if (isReady && !eng.playing()) startNow(); }
+      else if (d.hw === 'pause') { wantPlay = false; eng.pause(); }
+      else if (d.hw === 'toggle') toggle();
+      else if (d.hw === 'mute') eng.mute(true); else if (d.hw === 'unmute') eng.mute(false);
+      sync();
+    });
   }
 
   function render(cfg, root, hashId) {
@@ -1242,6 +1279,122 @@ npx wrangler deploy</pre>
     if (pv.getAttribute('data-src') !== src) { pv.setAttribute('data-src', src); pv.src = src; }
   }
   function mediaSoon() { clearTimeout(media.timer); media.timer = setTimeout(mediaUpdate, 250); }
+
+  // =====================================================================
+  // Many sources at once -> hash IDs -> one database file (videos.json in the GitHub repository)
+  // =====================================================================
+  var GH_API = (location.hostname === 'localhost' && /[?&]ghapi=([^&]+)/.exec(location.search)) ? decodeURIComponent(/[?&]ghapi=([^&]+)/.exec(location.search)[1]) : 'https://api.github.com';
+  var batch = [];                                  // { src, title, s, e, k, id, err }
+  (function () { var rp = repoParts(); if (rp) $('gRepo').value = rp.owner + '/' + rp.repo; try { $('gTok').value = localStorage.getItem('hw_gh_token') || ''; } catch (e) {} })();
+
+  async function batchId(it) {
+    var base = mediaCfg();
+    var cfg = Object.assign({}, base, { m: it.src, s: it.s, e: it.e, k: ytId(it.src) ? 'v' : it.k, l: '', ad: base.ad || {} });
+    if (cfg.k === 'i') throw new Error('Pictures: use the Picture card above (you mark the part there).');
+    if (!(cfg.e > cfg.s)) throw new Error('End must be after Start.');
+    return (await encodeCompressed(cfg)).replace(/^#/, '');
+  }
+  async function ytTitle(url) {                    // YouTube's own title service; if it cannot be reached the title stays editable
+    try { var r = await fetch('https://www.youtube.com/oembed?format=json&url=' + encodeURIComponent(url)); if (r.ok) { var j = await r.json(); return String(j.title || ''); } } catch (e) {}
+    return '';
+  }
+  function fileTitle(u) { try { var n = decodeURIComponent(new URL(u, location.href).pathname.split('/').pop() || ''); return n.replace(/\.[a-z0-9]+$/i, '').replace(/[_-]+/g, ' ').trim(); } catch (e) { return ''; } }
+
+  async function batchMake() {
+    var lines = $('bSrc').value.split(/\r?\n/).map(function (x) { return x.trim(); }).filter(Boolean);
+    var s0 = parseTime($('bStart').value), e0 = parseTime($('bEnd').value);
+    if (isNaN(s0)) s0 = 0; if (isNaN(e0)) e0 = s0 + 30;
+    $('bInfo').textContent = 'Working…'; batch = [];
+    var seen = {};
+    for (var i = 0; i < lines.length; i++) {
+      var u = lines[i]; if (seen[u]) continue; seen[u] = 1;
+      var it = { src: u, title: '', s: s0, e: e0, k: kindFor(u, ''), id: '', err: '' };
+      if (!ytId(u) && !safeMedia(u)) it.err = 'Use an https:// link.';
+      batch.push(it);
+    }
+    batchDraw();
+    await Promise.all(batch.map(async function (it, i) {
+      if (it.err) return;
+      it.title = ytId(it.src) ? (await ytTitle(it.src)) : fileTitle(it.src);
+      if (!it.title) it.title = ytId(it.src) ? 'YouTube ' + ytId(it.src) : 'Video ' + (i + 1);
+      try { it.id = await batchId(it); } catch (e) { it.err = e.message; }
+    }));
+    batchDraw();
+    var ok = batch.filter(function (x) { return x.id; }).length;
+    $('bInfo').textContent = ok + ' of ' + batch.length + ' ready';
+  }
+  function batchDraw() {
+    var box = $('bList'); box.textContent = '';
+    batch.forEach(function (it, i) {
+      var r = document.createElement('div'); r.className = 'brow';
+      var t = document.createElement('input'); t.type = 'text'; t.value = it.title; t.maxLength = 140; t.setAttribute('aria-label', 'Title'); t.oninput = function () { it.title = t.value; };
+      var a = document.createElement('input'); a.type = 'text'; a.value = timeText(it.s); a.setAttribute('aria-label', 'Start');
+      var b = document.createElement('input'); b.type = 'text'; b.value = timeText(it.e); b.setAttribute('aria-label', 'End');
+      var redo = async function () { var s1 = parseTime(a.value), e1 = parseTime(b.value); if (!isNaN(s1)) it.s = s1; if (!isNaN(e1)) it.e = e1; it.err = ''; try { it.id = await batchId(it); } catch (e) { it.id = ''; it.err = e.message; } batchDraw(); };
+      a.onchange = b.onchange = redo;
+      var acts = document.createElement('span'); acts.style.whiteSpace = 'nowrap';
+      var pv = document.createElement('button'); pv.type = 'button'; pv.textContent = '▶'; pv.title = 'Preview'; pv.disabled = !it.id;
+      pv.onclick = function () { $('mPreview').src = location.origin + location.pathname + '?blob=1#' + it.id; $('mPreview').scrollIntoView({ block: 'center', behavior: 'smooth' }); };
+      var cp = document.createElement('button'); cp.type = 'button'; cp.textContent = 'Copy ID'; cp.disabled = !it.id; cp.onclick = function () { navigator.clipboard && navigator.clipboard.writeText(it.id); cp.textContent = 'Copied'; setTimeout(function () { cp.textContent = 'Copy ID'; }, 1200); };
+      var rm = document.createElement('button'); rm.type = 'button'; rm.textContent = '✕'; rm.title = 'Remove'; rm.onclick = function () { batch.splice(i, 1); batchDraw(); };
+      acts.appendChild(pv); acts.appendChild(cp); acts.appendChild(rm);
+      var src = document.createElement('div'); src.className = 'src'; src.textContent = it.src;
+      r.appendChild(t); r.appendChild(a); r.appendChild(b); r.appendChild(acts); r.appendChild(src);
+      if (it.err) { var er = document.createElement('div'); er.className = 'bad'; er.textContent = it.err; r.appendChild(er); }
+      box.appendChild(r);
+    });
+  }
+
+  // ---- GitHub contents API (the database is one JSON file in the repository)
+  function ghHeaders() { return { 'Authorization': 'Bearer ' + $('gTok').value.trim(), 'Accept': 'application/vnd.github+json', 'X-GitHub-Api-Version': '2022-11-28' }; }
+  function utf8b64(str) { var bytes = new TextEncoder().encode(str), bin = ''; for (var i = 0; i < bytes.length; i += 8192) bin += String.fromCharCode.apply(null, bytes.subarray(i, i + 8192)); return btoa(bin); }
+  function b64utf8(b64) { var bin = atob(b64.replace(/\s/g, '')), by = new Uint8Array(bin.length); for (var i = 0; i < bin.length; i++) by[i] = bin.charCodeAt(i); return new TextDecoder().decode(by); }
+  async function ghErr(r) { var m = ''; try { m = (await r.json()).message || ''; } catch (e) {} return r.status === 401 ? 'The token was refused (wrong or expired).' : r.status === 403 ? 'The token is not allowed to write to this repository (' + m + ').' : r.status === 404 ? 'Repository or token permission not found (check "owner/repo" and that the token has access to it).' : 'GitHub said ' + r.status + (m ? ': ' + m : ''); }
+
+  /** Adds the entries (newest first) to videos.json; entries whose id is already there are skipped. Returns { added, total }. */
+  async function dbSave(entries) {
+    var repo = $('gRepo').value.trim(), path = $('gFile').value.trim() || 'videos.json';
+    if (!/^[\w.-]+\/[\w.-]+$/.test(repo)) throw new Error('Repository must look like owner/name.');
+    if (!$('gTok').value.trim()) throw new Error('Paste the GitHub access token first.');
+    try { if ($('gRem').checked) localStorage.setItem('hw_gh_token', $('gTok').value.trim()); else localStorage.removeItem('hw_gh_token'); } catch (e) {}
+    var url = GH_API + '/repos/' + repo + '/contents/' + path.split('/').map(encodeURIComponent).join('/');
+    for (var attempt = 0; attempt < 3; attempt++) {
+      var r = await fetch(url, { headers: ghHeaders(), cache: 'no-store' }), sha = null, data = { site: { name: 'Epic Video' }, videos: [] };
+      if (r.status === 404) { /* the file does not exist yet: it is created */ }
+      else if (!r.ok) throw new Error(await ghErr(r));
+      else { var j = await r.json(); sha = j.sha; try { data = JSON.parse(b64utf8(j.content)); } catch (e) { throw new Error(path + ' exists but is not valid JSON; not changed.'); } }
+      if (!Array.isArray(data.videos)) data.videos = [];
+      var have = {}; data.videos.forEach(function (v) { have[v.id || v.hash] = 1; });
+      var fresh = entries.filter(function (e) { return !have[e.id]; });
+      if (!fresh.length) return { added: 0, total: data.videos.length };
+      data.videos = fresh.concat(data.videos);
+      var body = { message: 'Add ' + fresh.length + ' video' + (fresh.length > 1 ? 's' : '') + ' to the database', content: utf8b64(JSON.stringify(data, null, 2) + '\n') };
+      if (sha) body.sha = sha;
+      var put = await fetch(url, { method: 'PUT', headers: Object.assign({ 'Content-Type': 'application/json' }, ghHeaders()), body: JSON.stringify(body) });
+      if (put.ok) return { added: fresh.length, total: data.videos.length };
+      if (put.status !== 409 && put.status !== 422) throw new Error(await ghErr(put));      // changed meanwhile: read again and retry
+    }
+    throw new Error('The database kept changing; try again.');
+  }
+  function entry(id, title) { return { id: id, title: title || '', cat: $('bCat').value.trim(), desc: '', date: new Date().toISOString().slice(0, 10) }; }
+  async function doSave(entries, label) {
+    var m = $('bMsg'); m.className = 'hint'; m.style.color = ''; m.textContent = 'Saving…';
+    try {
+      var res = await dbSave(entries);
+      m.className = 'hint mgood';
+      m.textContent = res.added ? 'Saved ' + res.added + ' ' + label + '. The database now has ' + res.total + ' videos (the website updates in about a minute).' : 'Already in the database: nothing added.';
+    } catch (e) { m.className = 'hint'; m.style.color = '#dc2626'; m.textContent = e.message; }
+  }
+  $('bMake').addEventListener('click', batchMake);
+  $('bCopy').addEventListener('click', function () { var t = batch.filter(function (x) { return x.id; }).map(function (x) { return x.id; }).join('\n'); if (t && navigator.clipboard) navigator.clipboard.writeText(t); $('bInfo').textContent = t ? 'Copied ' + t.split('\n').length + ' IDs' : 'Nothing to copy'; });
+  $('bSaveAll').addEventListener('click', function () {
+    var list = batch.filter(function (x) { return x.id; }); if (!list.length) { $('bMsg').className = 'hint'; $('bMsg').textContent = 'Press "Make all hash URLs" first.'; return; }
+    doSave(list.map(function (x) { return entry(x.id, x.title); }), 'videos');
+  });
+  $('bSaveOne').addEventListener('click', function () {
+    var id = $('mOutId').value.trim(); if (!id) { $('bMsg').className = 'hint'; $('bMsg').textContent = 'Make a valid clip above first.'; return; }
+    doSave([entry(id, $('mTitle').value.trim() || (ytId($('mUrl').value) ? 'YouTube ' + ytId($('mUrl').value) : fileTitle($('mUrl').value)) || 'Video')], 'video');
+  });
 
   // audio gets a slim player strip, video a 16:9 picture (only while the size is still one of the two defaults)
   function mediaFitSize() {
