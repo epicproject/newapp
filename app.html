@@ -1,0 +1,213 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Epic Video</title>
+<meta name="description" content="A small video platform. Every video is a Hash Widget URL; the list comes from videos.json.">
+<style>
+  :root { --bg:#f6f7fb; --card:#fff; --ink:#0f172a; --mut:#64748b; --line:#e2e8f0; --acc:#2563eb; --acc2:#1d4ed8; --chip:#e8eefc; }
+  @media (prefers-color-scheme: dark) { :root { --bg:#0b1020; --card:#131a2e; --ink:#e8edf7; --mut:#94a3b8; --line:#243049; --acc:#5b8cff; --acc2:#7aa2ff; --chip:#1b2742; } }
+  * { box-sizing: border-box; }
+  [hidden] { display: none !important; }
+  html { color-scheme: light dark; }
+  body { margin: 0; font: 15px/1.5 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; background: var(--bg); color: var(--ink); }
+  a { color: inherit; text-decoration: none; }
+  header { position: sticky; top: 0; z-index: 5; display: flex; gap: 12px; align-items: center; padding: 10px 16px; background: var(--card); border-bottom: 1px solid var(--line); }
+  .logo { display: flex; align-items: center; gap: 8px; font-weight: 800; font-size: 19px; cursor: pointer; white-space: nowrap; }
+  .logo i { display: inline-grid; place-items: center; width: 30px; height: 22px; border-radius: 7px; background: var(--acc); color: #fff; font-style: normal; font-size: 12px; }
+  #q { flex: 1; min-width: 0; max-width: 520px; margin: 0 auto; padding: 9px 14px; border: 1px solid var(--line); border-radius: 999px; background: var(--bg); color: var(--ink); font: inherit; }
+  #q:focus { outline: 2px solid var(--acc); }
+  button { font: inherit; cursor: pointer; }
+  .btn { padding: 8px 14px; border: 1px solid var(--line); border-radius: 999px; background: var(--card); color: var(--ink); }
+  .btn:hover { border-color: var(--acc); color: var(--acc); }
+  .btn.pri { background: var(--acc); border-color: var(--acc); color: #fff; } .btn.pri:hover { background: var(--acc2); color: #fff; }
+  main { max-width: 1240px; margin: 0 auto; padding: 16px; }
+  .chips { display: flex; gap: 8px; overflow-x: auto; padding-bottom: 6px; margin-bottom: 12px; }
+  .chip { flex: none; padding: 6px 14px; border-radius: 999px; background: var(--chip); border: 1px solid transparent; color: var(--ink); }
+  .chip.on { background: var(--ink); color: var(--bg); }
+  .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 18px; }
+  .vc { display: block; cursor: pointer; border-radius: 12px; overflow: hidden; background: var(--card); border: 1px solid var(--line); transition: transform .12s, box-shadow .12s; }
+  .vc:hover, .vc:focus-visible { transform: translateY(-2px); box-shadow: 0 8px 24px rgba(0,0,0,.14); outline: none; }
+  .th { position: relative; aspect-ratio: 16/9; background: linear-gradient(135deg, #1e3a8a, #6366f1); overflow: hidden; }
+  .th img { width: 100%; height: 100%; object-fit: cover; display: block; }
+  .th .play { position: absolute; inset: 0; display: grid; place-items: center; color: #fff; font-size: 34px; opacity: .85; text-shadow: 0 2px 10px rgba(0,0,0,.5); }
+  .th .dur { position: absolute; right: 8px; bottom: 8px; padding: 1px 7px; border-radius: 6px; background: rgba(0,0,0,.78); color: #fff; font-size: 12px; }
+  .vi { padding: 10px 12px 12px; }
+  .vi h3 { margin: 0 0 2px; font-size: 15px; line-height: 1.3; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+  .vi small { color: var(--mut); }
+  .watch { display: grid; grid-template-columns: minmax(0, 1fr) 340px; gap: 22px; align-items: start; }
+  @media (max-width: 920px) { .watch { grid-template-columns: 1fr; } }
+  .player { background: #000; border-radius: 12px; overflow: hidden; aspect-ratio: 16/9; width: 100%; }
+  .player iframe { width: 100%; height: 100%; border: 0; display: block; }
+  .meta h1 { margin: 14px 0 4px; font-size: 21px; line-height: 1.3; }
+  .meta .row { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; color: var(--mut); }
+  .desc { margin-top: 12px; padding: 12px 14px; background: var(--card); border: 1px solid var(--line); border-radius: 12px; white-space: pre-wrap; }
+  .up { display: grid; gap: 12px; }
+  .up .vc { display: grid; grid-template-columns: 150px 1fr; border: 0; background: none; border-radius: 8px; }
+  .up .th { border-radius: 8px; } .up .vi { padding: 0 10px; }
+  .empty { padding: 50px 16px; text-align: center; color: var(--mut); }
+  dialog { width: min(640px, 94vw); border: 1px solid var(--line); border-radius: 14px; background: var(--card); color: var(--ink); padding: 18px; }
+  dialog::backdrop { background: rgba(0,0,0,.5); }
+  dialog h2 { margin: 0 0 8px; font-size: 18px; }
+  label { display: block; font-weight: 600; margin: 10px 0 4px; font-size: 13px; }
+  input, textarea, select { width: 100%; padding: 8px 10px; border: 1px solid var(--line); border-radius: 8px; background: var(--bg); color: var(--ink); font: inherit; }
+  textarea { min-height: 76px; resize: vertical; font-family: Consolas, monospace; font-size: 12px; }
+  .hint { color: var(--mut); font-size: 12px; margin-top: 4px; }
+  .acts { display: flex; gap: 8px; justify-content: flex-end; margin-top: 14px; }
+  footer { text-align: center; color: var(--mut); font-size: 12px; padding: 24px 16px 40px; }
+</style>
+</head>
+<body>
+<header>
+  <div class="logo" id="logo" tabindex="0" role="link" aria-label="Home"><i>▶</i><span id="siteName">Epic Video</span></div>
+  <input id="q" type="search" placeholder="Search videos" aria-label="Search videos" autocomplete="off">
+  <button class="btn pri" id="addBtn" type="button">+ Add</button>
+</header>
+
+<main id="home">
+  <div class="chips" id="chips"></div>
+  <div class="grid" id="grid"></div>
+  <div class="empty" id="empty" hidden>No videos found.</div>
+</main>
+
+<main id="watchPage" hidden>
+  <div class="watch">
+    <div>
+      <div class="player" id="player"></div>
+      <div class="meta">
+        <h1 id="wTitle"></h1>
+        <div class="row"><span id="wInfo"></span><button class="btn" id="shareBtn" type="button">Copy link</button><button class="btn" id="embedBtn" type="button">Copy embed code</button></div>
+        <div class="desc" id="wDesc" hidden></div>
+      </div>
+    </div>
+    <aside class="up" id="up"></aside>
+  </div>
+</main>
+
+<dialog id="dlg">
+  <h2>Add a video to the database</h2>
+  <p class="hint" style="margin:0">The platform reads <b>videos.json</b>. Make the video in the Hash Widget builder (Media → Video), paste its link, iframe code or ID here, and copy the entry into videos.json.</p>
+  <label for="aHash">Hash URL, iframe code or ID</label>
+  <textarea id="aHash" placeholder='https://epicproject.github.io/newapp/#z.… or <iframe src="…">'></textarea>
+  <label for="aTitle">Title</label><input id="aTitle" maxlength="140">
+  <label for="aCat">Category</label><input id="aCat" maxlength="40" placeholder="Music, Nature, Education…">
+  <label for="aDesc">Description</label><input id="aDesc" maxlength="500">
+  <div class="hint" id="aMsg"></div>
+  <label for="aOut">Entry for videos.json <button class="btn" type="button" id="aCopy" style="padding:2px 10px;margin-left:6px">Copy</button></label>
+  <textarea id="aOut" readonly></textarea>
+  <div class="acts"><button class="btn" id="aClose" type="button">Close</button></div>
+</dialog>
+
+<footer>Every video here is a <b>Hash Widget URL</b> inside an iframe. The list is the file <code>videos.json</code>, so there is no server and no database to run.</footer>
+
+<script>
+(function () {
+  'use strict';
+  var BASE = 'https://epicproject.github.io/newapp/';
+  var $ = function (id) { return document.getElementById(id); };
+  var db = { site: { name: 'Epic Video' }, videos: [] }, cat = 'All', info = {};
+
+  // ---------------------------------------------------------------- the video address is only ever our own widget page
+  function toId(s) {                                    // accepts a full URL, "#id", an iframe snippet or a bare ID
+    s = String(s || '').trim();
+    var m = /src\s*=\s*["']([^"']+)["']/i.exec(s); if (m) s = m[1];
+    s = s.replace(/&amp;/g, '&');
+    var h = s.indexOf('#'); if (h >= 0) { if (s.slice(0, h).replace(/\/?$/, '/') !== BASE && s.slice(0, h) !== '') return ''; s = s.slice(h + 1); }
+    return /^[A-Za-z0-9_.~%\-]{1,1500}$/.test(s) ? s : '';
+  }
+  function srcOf(v) { return BASE + '#' + v.id; }
+
+  // ---------------------------------------------------------------- read what is inside a long ID (title, source, length)
+  function b64(s) { s = s.replace(/-/g, '+').replace(/_/g, '/'); while (s.length % 4) s += '='; var bin = atob(s), u = new Uint8Array(bin.length); for (var i = 0; i < bin.length; i++) u[i] = bin.charCodeAt(i); return u; }
+  async function decode(id) {
+    try {
+      var m = /^(z|b)\.(.+)$/.exec(id); if (!m) return null;
+      var bytes = b64(m[2]);
+      if (m[1] === 'z') { var ds = new DecompressionStream('deflate-raw'), w = ds.writable.getWriter(); w.write(bytes); w.close(); bytes = new Uint8Array(await new Response(ds.readable).arrayBuffer()); }
+      var o = JSON.parse(new TextDecoder().decode(bytes)); return o && o.t === 3 ? o : null;
+    } catch (e) { return null; }
+  }
+  function ytOf(u) { var m = /^https?:\/\/(?:www\.|m\.)?(?:youtube\.com\/(?:watch\?(?:.*&)?v=|embed\/|shorts\/|live\/)|youtu\.be\/)([A-Za-z0-9_-]{11})/.exec(u || ''); return m ? m[1] : ''; }
+  function fmt(t) { t = Math.max(0, Math.round(t)); var h = Math.floor(t / 3600), m = Math.floor(t % 3600 / 60), s = t % 60; return (h ? h + ':' + (m < 10 ? '0' : '') : '') + m + ':' + (s < 10 ? '0' : '') + s; }
+  function esc(s) { return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; }); }
+
+  // ---------------------------------------------------------------- the database: videos.json (or ?db=https://… of your own)
+  var FALLBACK = { site: { name: 'Epic Video' }, videos: [{ id: 'z.Pcy7CsJAEEDRf7n1sHmSYkDEzkbBznZdVwImJCSTLBLy72Jjd6qzYWgl9Cit2ThrlqWU3GdYbHlEF4Y-S95Ce1wP-Sn41Z_v18sNYUbLwjVCROvC1cIbZUXwI2rTEoVuRF--m6PQ25_B0EJIaFPnQotWTS5MaFEKHcoveaLbvn8B', title: 'Demo clip', cat: 'Demo', desc: 'A 20-second part of a YouTube video, played from a Hash Widget URL.' }] };
+  async function loadDb() {
+    var url = 'videos.json', q = /[?&]db=([^&]+)/.exec(location.search);
+    if (q && /^https:\/\//i.test(decodeURIComponent(q[1]))) url = decodeURIComponent(q[1]);
+    try { var r = await fetch(url, { cache: 'no-cache' }); if (!r.ok) throw 0; db = await r.json(); } catch (e) { db = FALLBACK; }
+    db.videos = (Array.isArray(db.videos) ? db.videos : []).map(function (v) {
+      return { id: toId(v.id || v.hash || v.url || v.embed), title: String(v.title || ''), desc: String(v.desc || ''), cat: String(v.cat || ''), date: String(v.date || '') };
+    }).filter(function (v) { return v.id; });
+    $('siteName').textContent = (db.site && db.site.name) || 'Epic Video'; document.title = $('siteName').textContent;
+    await Promise.all(db.videos.map(async function (v) { info[v.id] = await decode(v.id); if (!v.title && info[v.id] && info[v.id].l) v.title = info[v.id].l; if (!v.title) v.title = 'Video'; }));
+  }
+
+  // ---------------------------------------------------------------- home
+  function thumb(v) {
+    var o = info[v.id], y = o && ytOf(o.m), len = o && o.e > o.s ? fmt(o.e - o.s) : '';
+    return '<div class="th">' + (y ? '<img loading="lazy" alt="" src="https://i.ytimg.com/vi/' + y + '/hqdefault.jpg">' : '') + '<span class="play">▶</span>' + (len ? '<span class="dur">' + len + '</span>' : '') + '</div>';
+  }
+  function card(v) { return '<a class="vc" tabindex="0" href="#/watch/' + encodeURIComponent(v.id) + '">' + thumb(v) + '<div class="vi"><h3>' + esc(v.title) + '</h3><small>' + esc(v.cat) + (v.cat && v.date ? ' · ' : '') + esc(v.date) + '</small></div></a>'; }
+  function renderHome() {
+    var cats = ['All']; db.videos.forEach(function (v) { if (v.cat && cats.indexOf(v.cat) < 0) cats.push(v.cat); });
+    if (cats.indexOf(cat) < 0) cat = 'All';
+    $('chips').innerHTML = cats.length > 2 ? cats.map(function (c) { return '<button class="chip' + (c === cat ? ' on' : '') + '" data-c="' + esc(c) + '" type="button">' + esc(c) + '</button>'; }).join('') : '';
+    var term = $('q').value.trim().toLowerCase();
+    var list = db.videos.filter(function (v) { return (cat === 'All' || v.cat === cat) && (!term || (v.title + ' ' + v.desc + ' ' + v.cat).toLowerCase().indexOf(term) >= 0); });
+    $('grid').innerHTML = list.map(card).join(''); $('empty').hidden = list.length > 0;
+  }
+
+  // ---------------------------------------------------------------- watch
+  function renderWatch(id) {
+    var v = db.videos.filter(function (x) { return x.id === id; })[0];
+    if (!v) { go(''); return; }
+    $('player').innerHTML = ''; var f = document.createElement('iframe');
+    f.src = srcOf(v); f.title = v.title; f.setAttribute('allow', 'autoplay; fullscreen'); f.setAttribute('allowfullscreen', ''); f.setAttribute('scrolling', 'no'); f.setAttribute('loading', 'eager');
+    $('player').appendChild(f);
+    $('wTitle').textContent = v.title; document.title = v.title + ' · ' + $('siteName').textContent;
+    $('wInfo').textContent = [v.cat, v.date].filter(Boolean).join(' · ');
+    $('wDesc').hidden = !v.desc; $('wDesc').textContent = v.desc;
+    $('up').innerHTML = db.videos.filter(function (x) { return x.id !== id; }).map(card).join('');
+    window.scrollTo(0, 0);
+    $('shareBtn').onclick = function () { copy(location.href.split('#')[0] + '#/watch/' + encodeURIComponent(id), $('shareBtn')); };
+    $('embedBtn').onclick = function () { copy('<iframe src="' + srcOf(v) + '" width="640" height="360" frameborder="0" scrolling="no" allow="autoplay; fullscreen" allowfullscreen></iframe>', $('embedBtn')); };
+  }
+  function copy(text, btn) {
+    var old = btn.textContent, done = function () { btn.textContent = 'Copied ✓'; setTimeout(function () { btn.textContent = old; }, 1400); };
+    if (navigator.clipboard) navigator.clipboard.writeText(text).then(done, function () { window.prompt('Copy:', text); }); else window.prompt('Copy:', text);
+  }
+
+  // ---------------------------------------------------------------- routing: #/watch/<id>
+  function go(h) { location.hash = h; }
+  function route() {
+    var m = /^#\/watch\/(.+)$/.exec(location.hash);
+    $('home').hidden = !!m; $('watchPage').hidden = !m;
+    if (m) renderWatch(decodeURIComponent(m[1]));
+    else { $('player').innerHTML = ''; document.title = $('siteName').textContent; renderHome(); }
+  }
+
+  // ---------------------------------------------------------------- "+ Add": makes the JSON entry (the database is a plain file)
+  async function addDraft() {
+    var id = toId($('aHash').value), o = id ? await decode(id) : null;
+    $('aMsg').textContent = !$('aHash').value.trim() ? '' : !id ? 'That is not a link of this widget site.' : o ? 'Reads as: ' + (ytOf(o.m) ? 'YouTube video' : o.m) + (o.e > o.s ? ', ' + fmt(o.s) + ' to ' + fmt(o.e) : '') : 'ID accepted (its content cannot be previewed).';
+    $('aOut').value = id ? JSON.stringify({ id: id, title: $('aTitle').value.trim(), cat: $('aCat').value.trim(), desc: $('aDesc').value.trim(), date: new Date().toISOString().slice(0, 10) }, null, 2) + ',' : '';
+  }
+
+  document.addEventListener('click', function (e) { var c = e.target.closest && e.target.closest('.chip'); if (c) { cat = c.dataset.c; renderHome(); } });
+  $('q').addEventListener('input', function () { if (location.hash) go(''); else renderHome(); });
+  $('logo').addEventListener('click', function () { $('q').value = ''; cat = 'All'; if (location.hash) go(''); else renderHome(); });
+  $('logo').addEventListener('keydown', function (e) { if (e.key === 'Enter') this.click(); });
+  $('addBtn').addEventListener('click', function () { $('dlg').showModal(); });
+  $('aClose').addEventListener('click', function () { $('dlg').close(); });
+  ['aHash', 'aTitle', 'aCat', 'aDesc'].forEach(function (id) { $(id).addEventListener('input', addDraft); });
+  $('aCopy').addEventListener('click', function () { if ($('aOut').value) copy($('aOut').value, $('aCopy')); });
+  window.addEventListener('hashchange', route);
+
+  loadDb().then(route);
+})();
+</script>
+</body>
+</html>

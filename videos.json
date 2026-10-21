@@ -1,0 +1,21 @@
+{
+  "site": {
+    "name": "Epic Video"
+  },
+  "videos": [
+    {
+      "id": "z.Pcy7CsJAEEDRf7n1sHmSYkDEzkbBznZdVwImJCSTLBLy72Jjd6qzYWgl9Cit2ThrlqWU3GdYbHlEF4Y-S95Ce1wP-Sn41Z_v18sNYUbLwjVCROvC1cIbZUXwI2rTEoVuRF--m6PQ25_B0EJIaFPnQotWTS5MaFEKHcoveaLbvn8B",
+      "title": "Demo clip: a 20-second part of a video",
+      "cat": "Demo",
+      "desc": "Only seconds 0:21 to 0:41 of the YouTube video play. The player cannot go outside that part.",
+      "date": "2026-10-21"
+    },
+    {
+      "id": "z.RY3BCsIwEET_Zc5LY1UKXRCRnrwIehCvMUaCNrSYtIuU_rvrRU_zGHgzEzJ4RYhghJz7xMaISPHuhjxcfeG6aMRmF7bj5nE4XnZNvT-fBIQEXhA8uKwJT9VHLW0Pvts2eUL7x5h_6BRLgoCrtepBzyvNl7ZLdXTmu3IDT_P8AQ",
+      "title": "Me at the zoo (first YouTube video)",
+      "cat": "Demo",
+      "desc": "The whole 19-second video, played from a Hash Widget URL.",
+      "date": "2026-10-21"
+    }
+  ]
+}

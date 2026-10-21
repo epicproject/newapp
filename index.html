@@ -1,0 +1,1411 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex, nofollow">
+<title>Hash Widget Generator</title>
+<style>
+  :root { color-scheme: light; --ink:#0f172a; --mut:#64748b; --line:#e2e8f0; --bg:#f8fafc; --acc:#2563eb; }
+  * { box-sizing: border-box; }
+  [hidden] { display: none !important; } /* id-level display rules must not override hidden */
+  html, body { margin: 0; font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; color: var(--ink); }
+  body { background: var(--bg); }
+
+  /* ---------- Renderer mode: transparent, minimal ---------- */
+  body.render { background: transparent; }
+  #widget { width: 100%; }
+
+  /* ---------- Builder ---------- */
+  #builder { max-width: 1040px; margin: 0 auto; padding: 24px 16px 64px; }
+  #builder h1 { font-size: 22px; margin: 0 0 4px; }
+  #builder > p { margin: 0 0 20px; color: var(--mut); }
+  .grid { display: grid; grid-template-columns: 340px 1fr; gap: 20px; }
+  @media (max-width: 760px) { .grid { grid-template-columns: 1fr; } }
+  .card { background: #fff; border: 1px solid var(--line); border-radius: 12px; padding: 16px; }
+  .card h2 { font-size: 13px; text-transform: uppercase; letter-spacing: .06em; color: var(--mut); margin: 0 0 12px; }
+  .row { display: grid; grid-template-columns: 110px 1fr 48px; align-items: center; gap: 8px; margin-bottom: 10px; font-size: 14px; }
+  .row.two { grid-template-columns: 110px 1fr; }
+  .row output { font-variant-numeric: tabular-nums; color: var(--mut); text-align: right; font-size: 12px; }
+  input[type=text], select, textarea { width: 100%; padding: 8px 10px; border: 1px solid var(--line); border-radius: 8px; font: inherit; font-size: 14px; background: #fff; }
+  input[type=color] { width: 100%; height: 34px; padding: 2px; border: 1px solid var(--line); border-radius: 8px; background: #fff; }
+  input[type=range] { width: 100%; }
+  textarea { font-family: ui-monospace, Menlo, Consolas, monospace; font-size: 12px; resize: vertical; min-height: 64px; }
+  .stage { min-height: 140px; display: flex; align-items: center; justify-content: center; background: repeating-conic-gradient(#f1f5f9 0% 25%, #fff 0% 50%) 0 0/16px 16px; border-radius: 8px; padding: 12px; overflow: auto; }
+  .stage iframe { border: 0; max-width: 100%; }
+  .out { margin-top: 14px; }
+  .out label { display: flex; justify-content: space-between; align-items: center; font-size: 13px; font-weight: 600; margin-bottom: 4px; }
+  button.copy { font: inherit; font-size: 12px; padding: 4px 10px; border: 1px solid var(--line); border-radius: 6px; background: #fff; cursor: pointer; }
+  button.copy:hover { border-color: var(--acc); color: var(--acc); }
+  .hint { font-size: 12px; color: var(--mut); margin-top: 4px; }
+  .base { font-family: ui-monospace, Menlo, Consolas, monospace; font-size: 14px; background: #0f172a; color: #e2e8f0; padding: 8px 12px; border-radius: 8px; margin: 0 0 16px; overflow-wrap: anywhere; }
+  .base span { color: #fbbf24; }
+  .map { font-family: ui-monospace, Menlo, Consolas, monospace; font-size: 12px; color: var(--mut); line-height: 1.6; }
+
+  /* ---------- Monitor (live click counter) ---------- */
+  .monbtn { position: fixed; top: 14px; right: 16px; z-index: 20; display: flex; align-items: center; gap: 6px; background: #0f172a; color: #fff; border: 0; border-radius: 999px; padding: 9px 14px; font: inherit; font-size: 14px; font-weight: 600; cursor: pointer; box-shadow: 0 4px 14px rgba(15,23,42,.25); }
+  .monbtn:hover { background: #1e293b; }
+  .monbtn .dot { width: 8px; height: 8px; border-radius: 50%; background: #94a3b8; }
+  .monbtn.live .dot { background: #22c55e; box-shadow: 0 0 0 0 rgba(34,197,94,.7); animation: pulse 1.6s infinite; }
+  .monbtn.err .dot { background: #ef4444; }
+  .badge { background: #2563eb; border-radius: 999px; padding: 1px 8px; font-size: 12px; font-variant-numeric: tabular-nums; }
+  @keyframes pulse { 70% { box-shadow: 0 0 0 7px rgba(34,197,94,0); } 100% { box-shadow: 0 0 0 0 rgba(34,197,94,0); } }
+  #mon { position: fixed; top: 0; right: 0; bottom: 0; width: min(640px, 100vw); z-index: 30; background: #fff; box-shadow: -10px 0 40px rgba(15,23,42,.25); display: flex; flex-direction: column; }
+  .mon-head { display: flex; align-items: center; gap: 8px; padding: 12px 14px; border-bottom: 1px solid var(--line); }
+  .mon-head .sp { flex: 1; }
+  .mon-head button, .mon-tools button, #monSetup button { font: inherit; font-size: 13px; padding: 5px 10px; border: 1px solid var(--line); background: #fff; border-radius: 7px; cursor: pointer; }
+  .mon-head button:hover, .mon-tools button:hover { border-color: #94a3b8; }
+  .pill { font-size: 12px; padding: 2px 9px; border-radius: 999px; background: #e2e8f0; color: #334155; }
+  .pill.live { background: #dcfce7; color: #166534; } .pill.bad { background: #fee2e2; color: #991b1b; }
+  .mon-body { padding: 12px 14px; overflow: auto; flex: 1; }
+  #monSetup input { width: 100%; margin: 4px 0 10px; }
+  #monSetup pre, .mon-hint code { background: #0f172a; color: #e2e8f0; padding: 8px 10px; border-radius: 8px; overflow: auto; font-size: 12px; }
+  .tiles { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin-bottom: 12px; }
+  .tile { border: 1px solid var(--line); border-radius: 10px; padding: 8px 10px; }
+  .tile b { display: block; font-size: 22px; font-variant-numeric: tabular-nums; }
+  .tile span { color: var(--mut); font-size: 12px; }
+  .mon-tools { display: flex; gap: 6px; margin-bottom: 8px; }
+  .mon-tools input { flex: 1; }
+  .mon-tools .warn { color: #b91c1c; }
+  table.mon { width: 100%; border-collapse: collapse; font-size: 13px; }
+  table.mon th { text-align: left; color: var(--mut); font-weight: 500; font-size: 11px; text-transform: uppercase; letter-spacing: .05em; padding: 4px 6px; border-bottom: 1px solid var(--line); }
+  table.mon td { padding: 7px 6px; border-bottom: 1px solid #f1f5f9; vertical-align: top; }
+  table.mon td.n { text-align: right; font-variant-numeric: tabular-nums; }
+  table.mon td.big { font-size: 18px; font-weight: 700; }
+  table.mon tr.flash td { animation: flash 1.4s ease-out; }
+  @keyframes flash { from { background: #bbf7d0; } to { background: transparent; } }
+  .wlabel { font-weight: 600; word-break: break-word; }
+  .wid { font-family: ui-monospace, Menlo, Consolas, monospace; font-size: 11px; color: var(--mut); }
+  .chip { display: inline-block; font-size: 11px; background: #f1f5f9; border-radius: 999px; padding: 1px 7px; margin: 2px 3px 0 0; }
+  .rowbtn { font: inherit; font-size: 11px; border: 1px solid var(--line); background: #fff; border-radius: 6px; padding: 2px 6px; cursor: pointer; margin-right: 4px; }
+  .feed { font-size: 12px; }
+  .feed div { padding: 3px 0; border-bottom: 1px dashed #e2e8f0; }
+  .feed .k { display: inline-block; min-width: 40px; font-weight: 700; } .feed .k.click { color: #16a34a; } .feed .k.view { color: #64748b; }
+  .mon-body h4 { margin: 16px 0 6px; font-size: 12px; text-transform: uppercase; letter-spacing: .05em; color: var(--mut); }
+  @media (max-width: 520px) { .tiles { grid-template-columns: repeat(2, 1fr); } }
+
+  /* ---------- builder passcode lock ---------- */
+  #lock { position: fixed; inset: 0; z-index: 100; background: #0f172a; display: flex; align-items: center; justify-content: center; padding: 16px; }
+  #lock form { background: #fff; border-radius: 16px; padding: 26px 24px; width: min(360px, 100%); box-shadow: 0 20px 60px rgba(0,0,0,.4); }
+  #lock h2 { margin: 0 0 4px; font-size: 20px; } #lock p { margin: 0 0 14px; color: var(--mut); font-size: 14px; }
+  #lock input[type=password] { width: 100%; padding: 11px 12px; font-size: 16px; border: 1px solid var(--line); border-radius: 10px; margin-bottom: 10px; }
+  #lock label { display: flex; gap: 6px; align-items: center; font-size: 13px; color: var(--mut); margin-bottom: 14px; }
+  #lock button { width: 100%; padding: 11px; font-size: 15px; font-weight: 600; border: 0; border-radius: 10px; background: #2563eb; color: #fff; cursor: pointer; }
+  #lock button:disabled { opacity: .6; cursor: default; }
+  #lockMsg { color: #b91c1c; font-size: 13px; min-height: 18px; margin-top: 8px; }
+
+  /* ---------- media clip player (widget type 3) ---------- */
+  .mp { position: fixed; inset: 0; background: #000; color: #fff; overflow: hidden; font-family: system-ui, -apple-system, "Segoe UI", sans-serif; user-select: none; outline: none; }
+  .mp video { width: 100%; height: 100%; object-fit: contain; display: block; background: #000; }
+  .mp .ctl { position: absolute; left: 0; right: 0; bottom: 0; display: flex; align-items: center; gap: 6px; padding: 18px 10px 8px; background: linear-gradient(transparent, rgba(0,0,0,.78)); z-index: 3; }
+  .mp.audio { background: linear-gradient(135deg, #1e293b, #0f172a); }
+  .mp.audio .ctl { top: 0; padding: 0 12px; background: none; }
+  .mp .ttl { position: absolute; left: 14px; top: 8px; right: 14px; font-size: 12px; opacity: .75; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; z-index: 3; pointer-events: none; }
+  .mp.audio .ttl { top: 6px; }
+  .mp button { background: none; border: 0; color: #fff; font-size: 19px; cursor: pointer; width: 34px; height: 34px; border-radius: 50%; padding: 0; flex: none; }
+  .mp button:hover { background: rgba(255,255,255,.2); }
+  .mp input[type=range] { flex: 1; min-width: 0; accent-color: #fff; height: 4px; margin: 0; cursor: pointer; }
+  .mp .tm { font-size: 12px; font-variant-numeric: tabular-nums; white-space: nowrap; min-width: 70px; text-align: right; }
+  .mp .big { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; pointer-events: none; z-index: 2; }
+  .mp .big span { width: 64px; height: 64px; border-radius: 50%; background: rgba(0,0,0,.55); display: flex; align-items: center; justify-content: center; font-size: 26px; }
+  .mp .msg { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; padding: 16px; text-align: center; background: rgba(0,0,0,.75); font-size: 14px; z-index: 5; }
+  .mp .shield { position: absolute; inset: 0; z-index: 2; cursor: pointer; }
+  .mp .yt { position: absolute; inset: 0; }
+  .mp .yt iframe { width: 100%; height: 100%; border: 0; }
+
+  /* ---------- media clip card (builder) ---------- */
+  #mediaCard { grid-column: 2; }
+  .mtabs { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin: 4px 0 10px; }
+  .mtabs button { font: inherit; display: flex; flex-direction: column; align-items: center; gap: 2px; padding: 10px 6px; border: 2px solid var(--line); background: #fff; border-radius: 10px; cursor: pointer; font-size: 22px; line-height: 1.1; }
+  .mtabs button b { font-size: 14px; } .mtabs button small { font-size: 11px; color: var(--mut); }
+  .mtabs button:hover { border-color: var(--acc); }
+  .mtabs button.on { border-color: var(--acc); background: #eff6ff; box-shadow: 0 0 0 2px rgba(37,99,235,.18); }
+  .mtabs button:disabled { opacity: .4; cursor: not-allowed; }
+  #mCropWrap { cursor: crosshair; }
+  @media (max-width: 760px) { #mediaCard { grid-column: auto; } }
+  .mrow { display: grid; grid-template-columns: 96px 1fr 92px 120px; gap: 8px; align-items: center; margin-bottom: 8px; font-size: 14px; }
+  .mrow input[type=text] { padding: 6px 8px; }
+  .mrow button, #mediaCard .btn { font: inherit; font-size: 12px; padding: 6px 8px; border: 1px solid var(--line); background: #fff; border-radius: 7px; cursor: pointer; }
+  .mrow button:hover, #mediaCard .btn:hover { border-color: var(--acc); color: var(--acc); }
+  #mHelperWrap { margin: 8px 0 12px; background: #0f172a; border-radius: 10px; overflow: hidden; }
+  #mHelper { width: 100%; max-height: 260px; display: block; background: #000; }
+  .mopts { display: flex; flex-wrap: wrap; gap: 6px 16px; margin: 8px 0; font-size: 14px; }
+  .mopts label { display: flex; gap: 6px; align-items: center; }
+  .mwarn { background: #fffbeb; border: 1px solid #fcd34d; border-radius: 8px; padding: 8px 10px; font-size: 13px; margin: 8px 0; }
+  .mgood { color: #166534; font-weight: 600; }
+  #mUpBox a { color: var(--acc); }
+  #mediaBtn { right: 160px; background: #2563eb; }
+  #mediaBtn:hover { background: #1d4ed8; }
+
+  /* ---------- ads inside the media clip player ---------- */
+  .mp .adv { position: absolute; inset: 0; z-index: 6; background: #000; }
+  .mp .adv video { width: 100%; height: 100%; object-fit: contain; display: block; cursor: pointer; }
+  .mp .adtag { position: absolute; left: 10px; top: 10px; background: #facc15; color: #111; font-size: 11px; font-weight: 700; padding: 2px 7px; border-radius: 4px; z-index: 7; }
+  .mp .adv .skip { position: absolute; right: 12px; bottom: 14px; width: auto; height: auto; border-radius: 6px; padding: 8px 14px; font-size: 14px; background: rgba(0,0,0,.72); border: 1px solid rgba(255,255,255,.55); z-index: 7; }
+  .mp .adv .skip:disabled { opacity: .8; cursor: default; }
+  .mp .adv .skip:disabled:hover { background: rgba(0,0,0,.72); }
+  .mp .adv .more { position: absolute; left: 10px; bottom: 14px; width: auto; height: auto; border-radius: 6px; padding: 8px 12px; font-size: 13px; background: rgba(37,99,235,.9); z-index: 7; }
+  .mp .adban { position: absolute; left: 50%; transform: translateX(-50%); bottom: 56px; max-width: 92%; z-index: 4; align-items: center; gap: 8px; background: rgba(255,255,255,.97); color: #111; border-radius: 10px; padding: 6px 10px; box-shadow: 0 4px 16px rgba(0,0,0,.45); display: flex; }
+  .mp .adban .adtag2 { font-size: 10px; font-weight: 700; background: #facc15; border-radius: 3px; padding: 1px 5px; flex: none; }
+  .mp .adban .adimg { display: block; max-height: 56px; max-width: 100%; border-radius: 6px; }
+  .mp .adban .adtxt { font-size: 14px; font-weight: 600; }
+  .mp .adban .adx { width: 22px; height: 22px; font-size: 12px; color: #555; flex: none; }
+  .mp .adban .adx:hover { background: rgba(0,0,0,.08); }
+  .mp .adcta { position: absolute; top: 10px; right: 10px; z-index: 4; border: 0; border-radius: 999px; padding: 8px 14px; width: auto; height: auto; font-size: 14px; font-weight: 700; color: #111; cursor: pointer; box-shadow: 0 2px 10px rgba(0,0,0,.45); }
+  .mp .adcta:hover { filter: brightness(1.08); background: inherit; }
+  .mp .adcta i { font-style: normal; font-size: 10px; background: rgba(0,0,0,.2); border-radius: 3px; padding: 1px 5px; margin-left: 4px; vertical-align: middle; }
+  .adbox { border: 1px solid var(--line); border-radius: 10px; padding: 8px 10px; margin: 8px 0; }
+  .adh { display: flex; gap: 8px; align-items: center; font-weight: 600; font-size: 14px; }
+  .adf { margin-top: 8px; }
+
+  /* ---------- picture crop (media type "image") ---------- */
+  .mp.pic .cl { position: absolute; overflow: hidden; }
+  .mp.pic img { position: absolute; max-width: none; user-select: none; -webkit-user-drag: none; display: block; }
+  #mCropWrap { position: relative; display: inline-block; max-width: 100%; user-select: none; touch-action: none; line-height: 0; overflow: hidden; border-radius: 8px; background: #0f172a; margin: 6px 0; }
+  #mImg { display: block; max-width: 100%; max-height: 420px; }
+  #mCropBox { position: absolute; border: 2px solid #fff; outline: 2px solid #2563eb; box-shadow: 0 0 0 9999px rgba(15,23,42,.62); cursor: move; box-sizing: border-box; }
+  #mCropBox .ch { position: absolute; width: 16px; height: 16px; background: #fff; border: 2px solid #2563eb; border-radius: 4px; transform: translate(-50%, -50%); box-sizing: border-box; }
+  #mCropBox .ch[data-h=nw], #mCropBox .ch[data-h=se] { cursor: nwse-resize; } #mCropBox .ch[data-h=ne], #mCropBox .ch[data-h=sw] { cursor: nesw-resize; }
+  #mCropBox .ch[data-h=n], #mCropBox .ch[data-h=s] { cursor: ns-resize; } #mCropBox .ch[data-h=e], #mCropBox .ch[data-h=w] { cursor: ew-resize; }
+</style>
+</head>
+<body>
+
+<!-- Renderer view -->
+<div id="widget" hidden></div>
+
+<!-- Builder view -->
+<div id="lock" hidden>
+  <form id="lockForm" autocomplete="off">
+    <h2>Hash Widget Generator</h2>
+    <p>Enter the passcode to open the builder.</p>
+    <input type="password" id="lockPass" autocomplete="current-password" aria-label="Passcode">
+    <label><input type="checkbox" id="lockRemember"> Remember on this device</label>
+    <button type="submit" id="lockBtn">Open</button>
+    <div id="lockMsg"></div>
+  </form>
+</div>
+
+<main id="builder" hidden>
+  <button id="mediaBtn" class="monbtn" type="button" title="Share only a part of a video or audio">🎬 Media clip</button>
+  <button id="monBtn" class="monbtn" type="button" title="Live click and view counter for every widget"><span class="dot"></span>Monitor <span id="monBadge" class="badge" hidden></span></button>
+  <aside id="mon" hidden aria-label="Monitor">
+    <div class="mon-head"><b>Monitor</b><span id="monState" class="pill">Not connected</span><span class="sp"></span><button id="monSettingsBtn" type="button">Settings</button><button id="monClose" type="button" aria-label="Close">✕</button></div>
+    <div id="monSetup" class="mon-body" hidden>
+      <p><b>Connect the counter</b><br>Every widget (on any website, and in the Android app) reports a view and each click to a small server. This panel reads it live.</p>
+      <label>Stats server address<input type="text" id="monUrl" placeholder="https://hash-widget-stats.YOURNAME.workers.dev" autocomplete="off"></label>
+      <label>Admin key (only you know it)<input type="password" id="monKey" autocomplete="off"></label>
+      <p><button type="button" id="monSave" style="background:#2563eb;color:#fff;border-color:#2563eb">Connect</button> <span id="monMsg" style="color:#b91c1c"></span></p>
+      <p class="mon-hint" style="color:var(--mut)">No server yet? Free, 2 minutes (see <code>analytics/README.md</code>):</p>
+      <pre>cd analytics
+npx wrangler login
+npx wrangler secret put ADMIN_KEY
+npx wrangler deploy</pre>
+      <p class="mon-hint" style="color:var(--mut)">Then put the printed address in <code>ANALYTICS_URL</code> at the top of this file so widgets start reporting.</p>
+    </div>
+    <div id="monLive" class="mon-body" hidden>
+      <div id="monTiles" class="tiles"></div>
+      <div class="mon-tools"><input type="text" id="monFilter" placeholder="Filter by text, id or website"><button type="button" id="monPause">Pause</button><button type="button" id="monResetAll" class="warn">Reset all</button></div>
+      <table class="mon"><thead><tr><th>Widget</th><th class="n">Clicks</th><th class="n">Views</th><th class="n">Per view</th><th>Last click</th></tr></thead><tbody id="monRows"></tbody></table>
+      <h4>Live feed</h4>
+      <div id="monFeed" class="feed"></div>
+    </div>
+  </aside>
+  <h1>Hash Widget Generator <small style="font-size:12px;color:var(--mut);font-weight:400">v2</small></h1>
+  <div class="base"><code id="baseUrl"></code><span>#ID</span></div>
+  <p>No database. Your widget lives entirely in the URL hash. Design it, copy the embed code, paste it anywhere.</p>
+
+  <div class="grid">
+    <section class="card">
+      <h2>Customize</h2>
+      <div class="row two"><label for="idIn">Load from ID</label><input type="text" id="idIn" placeholder="#0hsz748 or full URL" autocomplete="off"></div>
+      <div class="row two"><label for="type">Element</label>
+        <select id="type"><option value="0">Button</option><option value="1">Text input</option><option value="2">Heading</option></select></div>
+      <div class="row two"><label for="label">Label / text</label><input type="text" id="label" maxlength="120" value="Click me"></div>
+      <div class="row"><label for="h">Height</label><input type="range" id="h" min="20" max="350" step="1" value="50"><output></output></div>
+      <div class="row"><label for="w">Width (0 = auto)</label><input type="range" id="w" min="0" max="700" step="1" value="180"><output></output></div>
+      <div class="row"><label for="r">Border radius</label><input type="range" id="r" min="0" max="70" step="1" value="8"><output></output></div>
+      <div class="row"><label for="f">Font size</label><input type="range" id="f" min="8" max="43" step="1" value="16"><output></output></div>
+      <div class="row two"><label for="bg">Background</label><input type="color" id="bg" value="#2563eb"></div>
+      <div class="row two"><label for="bgT">Transparent bg</label><input type="checkbox" id="bgT"></div>
+      <div class="row two"><label for="fg">Text color</label><input type="color" id="fg" value="#ffffff"></div>
+      <h2 style="margin-top:18px">Link &amp; style</h2>
+      <div class="row two"><label for="url">Click opens URL</label><input type="text" id="url" placeholder="https://example.com  or  screen:home (Android app)" autocomplete="off"></div>
+      <div class="row two"><label for="tgt">Open in</label>
+        <select id="tgt"><option value="0">New tab</option><option value="1">Same page (whole window)</option></select></div>
+      <div class="row two"><label for="bold">Bold text</label><input type="checkbox" id="bold"></div>
+      <div class="row two"><label for="ta">Text align</label><select id="ta"><option value="0">Left</option><option value="1">Center</option><option value="2">Right</option></select></div>
+      <div class="row two"><label for="pw">Password input</label><input type="checkbox" id="pw"></div>
+      <div class="row"><label for="bw">Border width</label><input type="range" id="bw" min="0" max="10" step="1" value="0"><output></output></div>
+      <div class="row two"><label for="bc">Border color</label><input type="color" id="bc" value="#1e293b"></div>
+      <div class="row two"><label for="hbT">Hover color</label><span style="display:flex;gap:8px;align-items:center"><input type="checkbox" id="hbT"><input type="color" id="hb" value="#1d4ed8"></span></div>
+    </section>
+
+    <section class="card">
+      <h2>Live preview</h2>
+      <div class="stage"><iframe id="preview" title="preview" scrolling="no"></iframe></div>
+      <div class="row two" style="margin-top:12px"><label for="usePreview">Preview from</label>
+        <select id="usePreview"><option value="z">Compressed URL (exact)</option><option value="s">Short-code URL (quantized)</option></select></div>
+
+      <div class="out"><label>Compressed hash URL <button class="copy" data-c="outZ">Copy</button></label><textarea id="outZ" readonly></textarea></div>
+      <div class="out"><label>Short ID <button class="copy" data-c="outId">Copy</button></label><textarea id="outId" readonly style="min-height:36px"></textarea></div>
+      <div class="out"><label>Short-code hash URL <button class="copy" data-c="outS">Copy</button></label><textarea id="outS" readonly></textarea>
+        <div class="hint" id="qnote"></div></div>
+      <div class="out"><label>Embed code <button class="copy" data-c="outE">Copy</button></label><textarea id="outE" readonly></textarea></div>
+      <div class="out"><label>Short-code map</label>
+        <div class="map">#&nbsp;T&nbsp;H&nbsp;W&nbsp;B&nbsp;C&nbsp;R&nbsp;F&nbsp;[~label]<br>
+        T type 0 button · 1 input · 2 heading<br>H height = v×10 px · W width = v×20 px (0 = auto)<br>
+        B background · C text → 36-colour palette<br>R radius = v×2 px · F font = 8+v px</div></div>
+    </section>
+
+    <section class="card" id="mediaCard">
+      <h2>🎬 Media: share only a part of a video, audio or image</h2>
+      <p class="hint" style="margin:0 0 10px">Pick a card. <b>Video / Audio:</b> only the start-to-end part plays. <b>Image:</b> mark the part with the mouse and only that part is shown.</p>
+      <div class="row two"><label for="mUrl">Source link</label><input type="text" id="mUrl" placeholder="https://…/video.mp4 · .mp3 · .webm · YouTube link" autocomplete="off"></div>
+      <div class="row two"><label for="mFile">Or a file</label><input type="file" id="mFile" accept="video/*,audio/*,image/*,.mp3,.m4a,.wav,.ogg,.webm,.mp4"></div>
+      <div id="mUpBox" class="mwarn" hidden></div>
+      <div id="mHelperWrap" hidden><video id="mHelper" controls playsinline preload="metadata"></video></div>
+      <div class="mtabs" id="mTabs" role="tablist"><button type="button" data-k="v" role="tab">🎬<b>Video</b><small>play a part</small></button><button type="button" data-k="a" role="tab">🎵<b>Audio</b><small>play a part</small></button><button type="button" data-k="i" role="tab">🖼️<b>Image</b><small>mark a part</small></button></div>
+      <select id="mKind" hidden><option value="v">Video</option><option value="a">Audio</option><option value="i">Picture (image)</option></select>
+      <div id="mImgBox" hidden>
+        <p class="hint" style="margin:6px 0"><b>Mark the part:</b> press and drag on the picture to draw a new box (like a pen). Drag the box to move it and the squares to resize it. <b>Only that part</b> of the picture is shown.</p>
+        <div id="mCropWrap"><img id="mImg" alt="" draggable="false"><div id="mCropBox"></div></div>
+        <div class="mopts">
+          <label>Shape <select id="mRatio" style="width:auto"><option value="free">Free</option><option value="1:1">Square 1:1</option><option value="16:9">16:9</option><option value="4:3">4:3</option><option value="3:4">3:4</option><option value="9:16">9:16</option></select></label>
+          <label>Fit <select id="mFit" style="width:auto"><option value="contain">Whole part</option><option value="cover">Fill the box</option></select></label>
+          <label><input type="checkbox" id="mAutoH" checked> Height follows the shape</label>
+          <label>Background <input type="color" id="mBg" value="#000000"></label>
+        </div>
+        <div class="row two"><label for="mLink">Click opens</label><input type="text" id="mLink" placeholder="https://… (optional)" autocomplete="off"></div>
+        <div class="mopts"><button type="button" class="btn" id="mCropAll">Whole picture</button> <button type="button" class="btn" id="mCropDl">Download the cropped picture (PNG)</button> <span class="hint" id="mCropInfo"></span></div>
+      </div>
+      <div id="mTimeBox">
+      <div class="mrow"><label for="mStart">Start</label><input type="range" id="mStartR" min="0" max="60" step="0.1" value="0"><input type="text" id="mStart" value="0:00" aria-label="Start time"><button type="button" id="mStartNow">Use video time</button></div>
+      <div class="mrow"><label for="mEnd">End</label><input type="range" id="mEndR" min="0" max="60" step="0.1" value="30"><input type="text" id="mEnd" value="0:30" aria-label="End time"><button type="button" id="mEndNow">Use video time</button></div>
+      <div class="hint" id="mLen"></div>
+      </div>
+      <div id="mOptsBox"><div class="mopts">
+        <label><input type="checkbox" id="mAuto"> Autoplay (starts muted)</label>
+        <label><input type="checkbox" id="mLoop"> Loop the clip</label>
+        <label><input type="checkbox" id="mMute"> Start muted</label>
+        <label><input type="checkbox" id="mCtl" checked> Show controls</label>
+      </div></div>
+      <div class="row two"><label for="mTitle">Title</label><input type="text" id="mTitle" maxlength="120" placeholder="shown on the player (optional)"></div>
+      <div class="mrow" style="grid-template-columns:96px 1fr 1fr 1fr"><label>Size (px)</label><input type="text" id="mW" value="640" aria-label="Width"><input type="text" id="mH" value="360" aria-label="Height"><input type="text" id="mR" value="12" aria-label="Corner radius" title="Corner radius"></div>
+      <div class="hint" id="mMsg"></div>
+      <h2 style="margin-top:14px">📢 Ads (optional)</h2>
+      <div class="adbox"><label class="adh"><input type="checkbox" id="aVon"> Video ad: full-screen before the clip, Skip after a few seconds</label>
+        <div class="adf" id="aVf" hidden>
+          <div class="row two"><label for="aVm">Ad video</label><input type="text" id="aVm" placeholder="https://…/ad.mp4  (a video file)" autocomplete="off"></div>
+          <div class="row two"><label for="aVu">Click opens</label><input type="text" id="aVu" placeholder="https://advertiser.com" autocomplete="off"></div>
+          <div class="row two"><label for="aVs">Skip after (sec)</label><input type="text" id="aVs" value="3"></div>
+        </div></div>
+      <div class="adbox"><label class="adh"><input type="checkbox" id="aBon"> Banner ad: bottom centre of the video, shown for N seconds</label>
+        <div class="adf" id="aBf" hidden>
+          <div class="row two"><label for="aBi">Banner image</label><input type="text" id="aBi" placeholder="https://…/banner.png  (or type text below)" autocomplete="off"></div>
+          <div class="row two"><label for="aBt">Or text</label><input type="text" id="aBt" maxlength="120" placeholder="50% off today only!" autocomplete="off"></div>
+          <div class="row two"><label for="aBu">Click opens</label><input type="text" id="aBu" placeholder="https://advertiser.com" autocomplete="off"></div>
+          <div class="mrow" style="grid-template-columns:96px 1fr 70px 1fr"><label for="aBa">Show at (sec)</label><input type="text" id="aBa" value="2"><label for="aBd" style="text-align:right">for (sec)</label><input type="text" id="aBd" value="8"></div>
+        </div></div>
+      <div class="adbox"><label class="adh"><input type="checkbox" id="aCon"> Button ad: a button on the video, also visible while it plays</label>
+        <div class="adf" id="aCf" hidden>
+          <div class="row two"><label for="aCt">Button text</label><input type="text" id="aCt" maxlength="40" value="Shop now" autocomplete="off"></div>
+          <div class="row two"><label for="aCu">Click opens</label><input type="text" id="aCu" placeholder="https://advertiser.com" autocomplete="off"></div>
+          <div class="row two"><label for="aCc">Colour</label><input type="color" id="aCc" value="#f59e0b"></div>
+        </div></div>
+      <div class="hint">Views and clicks of every ad are counted in the Monitor (as "Ad" rows next to the clip).</div>
+      <h2 style="margin-top:14px">Preview (the real player)</h2>
+      <div class="stage"><iframe id="mPreview" title="clip preview" allow="autoplay; fullscreen" allowfullscreen scrolling="no" style="border:0;max-width:100%"></iframe></div>
+      <div class="out"><label>Hash URL <button class="copy" data-c="mOutUrl">Copy</button></label><textarea id="mOutUrl" readonly></textarea></div>
+      <div class="out"><label>ID (use with embed.js or in the Android app) <button class="copy" data-c="mOutId">Copy</button></label><textarea id="mOutId" readonly style="min-height:48px"></textarea></div>
+      <div class="out"><label>iframe embed code <button class="copy" data-c="mOutE">Copy</button></label><textarea id="mOutE" readonly></textarea></div>
+      <div class="out"><label>embed.js snippet <button class="copy" data-c="mOutJs">Copy</button></label><textarea id="mOutJs" readonly></textarea></div>
+      <div class="hint">The link only plays this clip, but the original file is still downloadable by anyone who finds its address. For a truly private cut, upload an already-trimmed copy.</div>
+    </section>
+  </div>
+</main>
+
+<script>
+(function () {
+  'use strict';
+
+  /* =====================================================================
+   * 1. SHARED DATA MODEL
+   * A widget config is a plain object:
+   *   { t:0|1|2, h:px, w:px(0=auto), bg:"#rrggbb"|"transparent", c:"#rrggbb", r:px, f:px, l:"label" }
+   * ===================================================================== */
+
+  // 36-colour palette. Index (0-9 a-z, base36) is what the short-code stores.
+  var PALETTE = ['#000000','#ffffff','#f8fafc','#e2e8f0','#94a3b8','#475569','#1e293b','#ef4444','#f97316',
+    '#f59e0b','#eab308','#84cc16','#22c55e','#10b981','#14b8a6','#06b6d4','#0ea5e9','#3b82f6','#2563eb',
+    '#6366f1','#8b5cf6','#a855f7','#d946ef','#ec4899','#f43f5e','#7f1d1d','#9a3412','#854d0e','#166534',
+    '#115e59','#155e75','#1e3a8a','#4c1d95','#831843','#fde68a','transparent'];
+  var B36 = '0123456789abcdefghijklmnopqrstuvwxyz';
+  var TRANSPARENT_IDX = 35; // 'z'
+
+  var clamp = function (n, lo, hi) { n = Number(n); if (!isFinite(n)) n = lo; return Math.min(hi, Math.max(lo, Math.round(n))); };
+  var isColor = function (s) { return s === 'transparent' || /^#[0-9a-f]{6}$/i.test(s); };
+
+  // blob: links are only for the builder's own live preview (same page, same browser)
+  var ALLOW_BLOB = /[?&]blob=1(&|$)/.test(location.search);
+  var flt = function (n, lo, hi, d) { n = parseFloat(n); if (!isFinite(n)) n = d; return Math.min(hi, Math.max(lo, n)); };
+
+  // Media source: https link, or a relative path on this site (e.g. media/clip.mp4). Never javascript:, data:, http: ...
+  function safeMedia(u) {
+    u = String(u == null ? '' : u).trim().slice(0, 1500);
+    if (!u) return '';
+    if (/^https:\/\//i.test(u)) return u;
+    if (ALLOW_BLOB && /^blob:/i.test(u)) return u;
+    if (/^[a-z][a-z0-9+.-]*:/i.test(u) || u.indexOf('//') === 0 || u.indexOf('..') >= 0) return '';
+    return u;
+  }
+  // Type 3 = media clip: plays only seconds s..e of file/YouTube link m.
+  function sanitizeMedia(o) {
+    var m = safeMedia(o.m); if (!m) return null;
+    var st = flt(o.s, 0, 86400, 0), en = flt(o.e, 0, 86400, st + 30);
+    if (en < st + 0.1) en = st + 0.1;
+    var res = { t: 3, m: m, s: Math.round(st * 1000) / 1000, e: Math.round(en * 1000) / 1000, k: o.k === 'a' ? 'a' : (o.k === 'i' ? 'i' : 'v'),
+      ap: o.ap ? 1 : 0, lp: o.lp ? 1 : 0, mt: o.mt ? 1 : 0, ct: (o.ct === 0 || o.ct === false) ? 0 : 1,
+      h: clamp(o.h, 40, 1600), w: clamp(o.w, 120, 2400), r: clamp(o.r, 0, 60), l: String(o.l == null ? '' : o.l).slice(0, 200),
+      bg: (isColor(String(o.bg)) && o.bg !== 'transparent') ? String(o.bg) : '#000000', c: '#ffffff', f: 16, u: '', o: 0, b: 0, bw: 0, bc: '#1e293b', hb: '', a: 0, p: 0, ad: sanitizeAd(o.ad),
+      crop: sanitizeCrop(o.crop), fit: o.fit === 'cover' ? 'cover' : 'contain', lk: safeLink(o.lk) };
+    if (res.k === 'i') delete res.ad.v;          // a picture has no player: banner and button ads only
+    return res;
+  }
+  // crop = the shown part of a picture, as fractions (0..1) of its width and height
+  function sanitizeCrop(c) {
+    c = c && typeof c === 'object' ? c : {};
+    var w = flt(c.w, 0.01, 1, 1), h = flt(c.h, 0.01, 1, 1), x = flt(c.x, 0, 1 - w, 0), y = flt(c.y, 0, 1 - h, 0);
+    var r = function (n) { return Math.round(n * 10000) / 10000; };
+    return { x: r(x), y: r(y), w: r(w), h: r(h) };
+  }
+
+  // Advertiser links: http(s) only (a bare "example.com" gets https://)
+  function safeLink(u) {
+    u = String(u == null ? '' : u).trim().slice(0, 1000);
+    if (!u) return '';
+    if (!/^[a-z][a-z0-9+.-]*:/i.test(u)) u = 'https://' + u;
+    return /^https?:\/\//i.test(u) ? u : '';
+  }
+  // ad = { v: video ad {m,u,sk}, b: banner {i,t,u,a,d}, c: button {t,u,bg} }  (each part optional)
+  function sanitizeAd(a) {
+    var out = {};
+    if (!a || typeof a !== 'object') return out;
+    if (a.v && safeMedia(a.v.m)) out.v = { m: safeMedia(a.v.m), u: safeLink(a.v.u), sk: flt(a.v.sk, 0, 60, 3) };
+    if (a.b && (safeMedia(a.b.i) || String(a.b.t || '').trim())) out.b = { i: safeMedia(a.b.i), t: String(a.b.t || '').slice(0, 120), u: safeLink(a.b.u), a: flt(a.b.a, 0, 86400, 0), d: flt(a.b.d, 1, 120, 8) };
+    if (a.c && String(a.c.t || '').trim() && safeLink(a.c.u)) out.c = { t: String(a.c.t).slice(0, 40), u: safeLink(a.c.u), bg: (isColor(String(a.c.bg)) && a.c.bg !== 'transparent') ? String(a.c.bg) : '#f59e0b' };
+    return out;
+  }
+
+
+  // Validate + normalise ANY decoded object so the renderer never sees junk.
+  function sanitize(o) {
+    if (!o || typeof o !== 'object') return null;
+    var t = Number(o.t);
+    if (t !== 0 && t !== 1 && t !== 2 && t !== 3) return null;
+    if (t === 3) return sanitizeMedia(o);
+    return {
+      t: t,
+      h: clamp(o.h, 10, 600),
+      w: clamp(o.w, 0, 1200),
+      bg: isColor(String(o.bg)) ? String(o.bg) : '#2563eb',
+      c: isColor(String(o.c)) ? String(o.c) : '#ffffff',
+      r: clamp(o.r, 0, 300),
+      f: clamp(o.f, 6, 120),
+      l: String(o.l == null ? '' : o.l).slice(0, 200),
+      u: safeUrl(o.u),                                   // click-through link ('' = none)
+      o: Number(o.o) === 1 ? 1 : 0,                      // 0 = new tab, 1 = same (top) window
+      b: o.b ? 1 : 0,                                    // bold
+      bw: clamp(o.bw, 0, 20),                            // border width px
+      bc: isColor(String(o.bc)) && o.bc !== 'transparent' ? String(o.bc) : '#1e293b',
+      hb: isColor(String(o.hb)) ? String(o.hb) : '',     // hover background ('' = none)
+      a: [0, 1, 2].indexOf(Number(o.a)) >= 0 ? Number(o.a) : 0,   // heading text align: 0 left, 1 centre, 2 right
+      p: o.p ? 1 : 0                                     // input shows dots (password)
+    };
+  }
+
+  // Only http(s), mailto, tel and screen: links are allowed (blocks javascript:, data:, etc.).
+  function safeUrl(u) {
+    u = String(u == null ? '' : u).trim().slice(0, 1000);
+    if (!u) return '';
+    if (!/^[a-z][a-z0-9+.-]*:/i.test(u)) u = 'https://' + u;   // "example.com" -> https://example.com
+    return /^(https?:|mailto:|tel:|screen:)/i.test(u) ? u : '';   // screen:name = in-app navigation (Android app)
+  }
+
+  /* =====================================================================
+   * 2. ENCODERS / DECODERS
+   * Hash formats:
+   *   #z.<base64url(deflate-raw(JSON))>   compressed (exact)
+   *   #b.<base64url(JSON)>                fallback if CompressionStream is missing
+   *   #<7 base36 chars>[~<urlencoded label>]  positional short-code (quantized)
+   * ===================================================================== */
+
+  function toB64u(bytes) {
+    var s = ''; for (var i = 0; i < bytes.length; i++) s += String.fromCharCode(bytes[i]);
+    return btoa(s).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+  }
+  function fromB64u(str) {
+    str = str.replace(/-/g, '+').replace(/_/g, '/'); while (str.length % 4) str += '=';
+    var s = atob(str), b = new Uint8Array(s.length);
+    for (var i = 0; i < s.length; i++) b[i] = s.charCodeAt(i);
+    return b;
+  }
+  async function pipe(bytes, stream) {
+    var w = stream.writable.getWriter(); w.write(bytes); w.close();
+    return new Uint8Array(await new Response(stream.readable).arrayBuffer());
+  }
+  var HAS_CS = typeof CompressionStream === 'function' && typeof DecompressionStream === 'function';
+
+  async function encodeCompressed(cfg) {
+    var bytes = new TextEncoder().encode(JSON.stringify(cfg));
+    if (HAS_CS) { try { return 'z.' + toB64u(await pipe(bytes, new CompressionStream('deflate-raw'))); } catch (e) {} }
+    return 'b.' + toB64u(bytes);
+  }
+  async function decodeCompressed(h) {
+    var kind = h.charAt(0), body = h.slice(2), bytes = fromB64u(body);
+    if (kind === 'z') bytes = await pipe(bytes, new DecompressionStream('deflate-raw'));
+    return JSON.parse(new TextDecoder().decode(bytes));
+  }
+
+  // --- Short code -------------------------------------------------------
+  // Position: 0 type | 1 height | 2 width | 3 bg | 4 text | 5 radius | 6 font
+  function nearestPalette(hex, allowTransparent) {
+    if (hex === 'transparent') return TRANSPARENT_IDX;
+    var p = function (s) { return [1, 3, 5].map(function (i) { return parseInt(s.substr(i, 2), 16); }); };
+    var a = p(hex), best = 0, bd = 1e9;
+    for (var i = 0; i < TRANSPARENT_IDX; i++) {
+      var b = p(PALETTE[i]), d = 0; for (var k = 0; k < 3; k++) d += Math.pow(a[k] - b[k], 2);
+      if (d < bd) { bd = d; best = i; }
+    }
+    return best;
+  }
+  // The link is stored as "L" + base64url(bytes XOR 0x5a) so the ID shows no readable URL.
+  // This hides it from casual eyes only; anyone who reads this source can reverse it.
+  function obf(u) {
+    var b = new TextEncoder().encode(u), t = '';
+    for (var i = 0; i < b.length; i++) t += String.fromCharCode(b[i] ^ 0x5a);
+    return 'L' + btoa(t).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+  }
+  function unobf(x) {
+    if (x.charAt(0) !== 'L') return x;                         // older plain ids
+    var t = atob(x.slice(1).replace(/-/g, '+').replace(/_/g, '/')), b = new Uint8Array(t.length);
+    for (var i = 0; i < t.length; i++) b[i] = t.charCodeAt(i) ^ 0x5a;
+    return new TextDecoder().decode(b);
+  }
+  function encodeShort(cfg) {
+    var v = [cfg.t, Math.round(cfg.h / 10), Math.round(cfg.w / 20), nearestPalette(cfg.bg),
+             nearestPalette(cfg.c), Math.round(cfg.r / 2), cfg.f - 8];
+    var code = v.map(function (n) { return B36.charAt(clamp(n, 0, 35)); }).join('');
+    var enc = function (x) { return encodeURIComponent(x).replace(/~/g, '%7E'); };
+    // ~label[~link]  (link opens in a new tab; same-window + extras need the compressed URL)
+    return code + (cfg.l || cfg.u ? '~' + enc(cfg.l) : '') + (cfg.u ? '~' + obf(cfg.u) : '');
+  }
+  function decodeShort(h) {
+    var m = /^([0-9a-z]{7})(?:~([^~]*))?(?:~([^~]*))?$/i.exec(h); if (!m) return null;
+    var d = m[1].toLowerCase().split('').map(function (ch) { return B36.indexOf(ch); });
+    var dec = function (x) { if (!x) return ''; try { return decodeURIComponent(x); } catch (e) { return x; } };
+    var label = dec(m[2]), link = ''; try { link = m[3] ? unobf(dec(m[3])) : ''; } catch (e) {}
+    return {
+      t: d[0], h: d[1] * 10, w: d[2] * 20, bg: PALETTE[d[3]], c: PALETTE[d[4]] === 'transparent' ? '#000000' : PALETTE[d[4]],
+      r: d[5] * 2, f: d[6] + 8, l: label, u: link
+    };
+  }
+
+  // Dispatch on hash shape. Returns a sanitized config or null. Never throws.
+  async function parseHash(raw) {
+    try {
+      var h = raw.replace(/^#/, ''); if (!h) return null;
+      var obj = /^[zb]\./.test(h) ? await decodeCompressed(h) : decodeShort(h);
+      return sanitize(obj);
+    } catch (e) { return null; }
+  }
+
+  /* =====================================================================
+   * 3. RENDERING PIPELINE
+   * hash -> parseHash -> sanitize -> render(cfg) (textContent + style props only,
+   * no innerHTML, so user text can never inject markup).
+   * ===================================================================== */
+  // Counter server (see analytics/README.md). Empty = the widget never contacts anything.
+  var ANALYTICS_URL = '';
+
+  // Reports one "view" or "click" with the widget id and the website that embeds it. No cookies, no visitor address kept.
+  function track(kind, id) {
+    if (!ANALYTICS_URL || !id) return;
+    var host = '';
+    try { host = document.referrer ? new URL(document.referrer).host : (location.ancestorOrigins && location.ancestorOrigins[0] ? new URL(location.ancestorOrigins[0]).host : ''); } catch (e) {}
+    if (host === location.host) return;               // the builder's own preview is not an audience
+    try {
+      fetch(ANALYTICS_URL.replace(/\/+$/, '') + '/hit', { method: 'POST', mode: 'no-cors', keepalive: true, headers: { 'Content-Type': 'text/plain' }, body: JSON.stringify({ id: id, k: kind, h: host || 'unknown' }) });
+    } catch (e) {}
+  }
+
+  /* ---- media clip player: shows / plays ONLY seconds s..e ---- */
+  function ytId(u) {
+    var m = /^https?:\/\/(?:www\.|m\.)?(?:youtube\.com\/(?:watch\?(?:.*&)?v=|embed\/|shorts\/|live\/)|youtu\.be\/)([A-Za-z0-9_-]{11})/.exec(u);
+    return m ? m[1] : '';
+  }
+  function fmtTime(t) { t = Math.max(0, Math.round(t)); var h = Math.floor(t / 3600), m = Math.floor(t % 3600 / 60), s = t % 60; return (h ? h + ':' + (m < 10 ? '0' : '') : '') + m + ':' + (s < 10 ? '0' : '') + s; }
+  function mk(tag, cls, text) { var e = document.createElement(tag); if (cls) e.className = cls; if (text != null) e.textContent = text; return e; }
+  var ytLoading = null;
+  function loadYT(cb) {
+    if (window.YT && window.YT.Player) return cb();
+    if (!ytLoading) {
+      ytLoading = [];
+      window.onYouTubeIframeAPIReady = function () { ytLoading.splice(0).forEach(function (f) { f(); }); };
+      var sc = document.createElement('script'); sc.src = 'https://www.youtube.com/iframe_api'; document.head.appendChild(sc);
+    }
+    ytLoading.push(cb);
+  }
+
+  function renderCrop(cfg, root, hashId) {
+    root.textContent = '';
+    var wid = (hashId || '').replace(/^#/, ''), AD = cfg.ad || {}, adBan = AD.b, adCta = AD.c;
+    var box = mk('div', 'mp pic'); box.style.borderRadius = cfg.r + 'px'; box.style.background = cfg.bg;
+    var clip = mk('div', 'cl'), img = new Image();
+    img.alt = cfg.l || ''; img.draggable = false; clip.appendChild(img); box.appendChild(clip);
+    if (cfg.l) box.title = cfg.l;
+    function layout() {
+      var W = box.clientWidth, H = box.clientHeight, nw = img.naturalWidth, nh = img.naturalHeight, c = cfg.crop;
+      if (!W || !H || !nw || !nh) return;
+      var cw = c.w * nw, ch = c.h * nh, sc = cfg.fit === 'cover' ? Math.max(W / cw, H / ch) : Math.min(W / cw, H / ch);
+      var vw = Math.min(cw * sc, W), vh = Math.min(ch * sc, H);          // the window never shows more than the chosen part
+      clip.style.left = (W - vw) / 2 + 'px'; clip.style.top = (H - vh) / 2 + 'px'; clip.style.width = vw + 'px'; clip.style.height = vh + 'px';
+      img.style.width = nw * sc + 'px'; img.style.height = nh * sc + 'px';
+      img.style.left = -(c.x * nw * sc + (cw * sc - vw) / 2) + 'px'; img.style.top = -(c.y * nh * sc + (ch * sc - vh) / 2) + 'px';
+    }
+    img.addEventListener('load', layout);
+    img.addEventListener('error', function () { box.appendChild(mk('div', 'msg', 'This picture could not be loaded.')); });
+    window.addEventListener('resize', layout);
+    img.src = cfg.m;
+    function open(url, kind) { if (url) window.open(url, '_blank', 'noopener,noreferrer'); track('click', wid + (kind ? '.ad-' + kind : '')); }
+    if (cfg.lk) { box.style.cursor = 'pointer'; box.addEventListener('click', function (e) { if (!e.target.closest('.adban, .adcta')) open(cfg.lk, ''); }); }
+    var banEl = null;
+    if (adBan) {                                   // banner ad: bottom centre, visible for N seconds after it appears
+      banEl = mk('div', 'adban'); banEl.style.display = 'none'; banEl.style.bottom = '12px';
+      var face;
+      if (adBan.i) { face = document.createElement('img'); face.className = 'adimg'; face.alt = 'Ad'; face.src = adBan.i; face.style.position = 'static'; face.style.width = 'auto'; face.style.height = 'auto'; }
+      else face = mk('span', 'adtxt', adBan.t);
+      face.style.cursor = adBan.u ? 'pointer' : 'default'; face.addEventListener('click', function () { open(adBan.u, 'banner'); });
+      var xb = mk('button', 'adx', '✕'); xb.type = 'button'; xb.title = 'Close';
+      banEl.appendChild(mk('span', 'adtag2', 'Ad')); banEl.appendChild(face); banEl.appendChild(xb); box.appendChild(banEl);
+      var born = Date.now(), shown = false, done = false;
+      var hide = function () { done = true; banEl.style.display = 'none'; };
+      xb.addEventListener('click', function (e) { e.stopPropagation(); hide(); });
+      var iv = setInterval(function () {
+        var el = (Date.now() - born) / 1000;
+        if (!done && !shown && el >= adBan.a) { shown = true; banEl.style.display = 'flex'; track('view', wid + '.ad-banner'); }
+        if (shown && !done && el >= adBan.a + adBan.d) hide();
+        if (done) clearInterval(iv);
+      }, 100);
+    }
+    if (adCta) {                                   // button ad: stays on the picture
+      var cta = mk('button', 'adcta'); cta.type = 'button'; cta.style.background = adCta.bg;
+      cta.appendChild(document.createTextNode(adCta.t + ' ▸')); cta.appendChild(mk('i', '', 'Ad'));
+      cta.addEventListener('click', function (e) { e.stopPropagation(); open(adCta.u, 'btn'); });
+      box.appendChild(cta); track('view', wid + '.ad-btn');
+    }
+    root.appendChild(box);
+    track('view', wid);
+  }
+
+  function renderMedia(cfg, root, hashId) {
+    if (cfg.k === 'i') return renderCrop(cfg, root, hashId);
+    root.textContent = '';
+    var wid = (hashId || '').replace(/^#/, '');
+    var yt = ytId(cfg.m), isAudio = cfg.k === 'a' && !yt;
+    var AD = cfg.ad || {}, adPre = AD.v, adBan = AD.b, adCta = AD.c;
+    var box = mk('div', 'mp' + (isAudio ? ' audio' : '')); box.tabIndex = 0; box.style.borderRadius = cfg.r + 'px';
+    var S0 = cfg.s, E0 = cfg.e, ended = false, endTimer = 0;
+
+    var ctl = mk('div', 'ctl'), bPlay = mk('button', '', '▶'), seek = mk('input'), tm = mk('span', 'tm', '0:00 / ' + fmtTime(E0 - S0)),
+        bMute = mk('button', '', '🔊'), bFs = mk('button', '', '⛶'), big = mk('div', 'big'), bigIn = mk('span', '', '▶');
+    bPlay.title = 'Play / pause'; bMute.title = 'Mute'; bFs.title = 'Full screen'; bPlay.type = bMute.type = bFs.type = 'button';
+    seek.type = 'range'; seek.min = 0; seek.max = 1000; seek.value = 0; seek.setAttribute('aria-label', 'Position in the clip');
+    big.appendChild(bigIn);
+    ctl.appendChild(bPlay); ctl.appendChild(seek); ctl.appendChild(tm); ctl.appendChild(bMute);
+    if (!isAudio && document.fullscreenEnabled) ctl.appendChild(bFs);
+    if (cfg.l) box.appendChild(mk('div', 'ttl', cfg.l));
+
+    // ---------------- ads ----------------
+    function openAd(url, kind) { if (url) window.open(url, '_blank', 'noopener,noreferrer'); track('click', wid + '.ad-' + kind); }
+    var adPending = !!(adPre && adPre.m), adRunning = false, adLayer = null, adVid = null, skipBtn = null;
+    if (adPending) {                               // 1) full-size video ad before the clip, Skip after a few seconds
+      adLayer = mk('div', 'adv'); adLayer.style.display = 'none';
+      adVid = document.createElement('video'); adVid.playsInline = true; adVid.preload = 'auto'; adVid.disablePictureInPicture = true; adVid.src = adPre.m;
+      adVid.addEventListener('contextmenu', function (e) { e.preventDefault(); });
+      skipBtn = mk('button', 'skip', adPre.sk > 0 ? 'Skip in ' + Math.ceil(adPre.sk) : 'Skip ▸'); skipBtn.type = 'button'; skipBtn.disabled = adPre.sk > 0;
+      adLayer.appendChild(adVid); adLayer.appendChild(mk('div', 'adtag', 'Ad')); adLayer.appendChild(skipBtn);
+      if (adPre.u) { var more = mk('button', 'more', 'Learn more ▸'); more.type = 'button'; more.addEventListener('click', function () { openAd(adPre.u, 'pre'); }); adLayer.appendChild(more); }
+      adVid.addEventListener('click', function () { if (adPre.u) openAd(adPre.u, 'pre'); });
+      adVid.addEventListener('timeupdate', function () {
+        var left = Math.ceil(adPre.sk - adVid.currentTime);
+        if (left > 0) { skipBtn.textContent = 'Skip in ' + left; skipBtn.disabled = true; } else { skipBtn.textContent = 'Skip ▸'; skipBtn.disabled = false; }
+      });
+      adVid.addEventListener('ended', function () { finishAd(false); });
+      adVid.addEventListener('error', function () { finishAd(false); });          // a broken ad must never block the video
+      skipBtn.addEventListener('click', function () { if (!skipBtn.disabled) finishAd(true); });
+    }
+    var banEl = null, banShown = false, banDone = false, banElapsed = 0, banLast = 0, ctaSeen = false, cta = null;
+    function hideBanner() { banDone = true; banShown = false; if (banEl) banEl.style.display = 'none'; }
+    if (adBan) {                                   // 2) banner at the bottom centre, visible for N seconds of playing
+      banEl = mk('div', 'adban'); banEl.style.display = 'none';
+      var face;
+      if (adBan.i) { face = document.createElement('img'); face.className = 'adimg'; face.alt = 'Ad'; face.src = adBan.i; face.addEventListener('error', hideBanner); }
+      else face = mk('span', 'adtxt', adBan.t);
+      face.style.cursor = adBan.u ? 'pointer' : 'default';
+      face.addEventListener('click', function () { openAd(adBan.u, 'banner'); });
+      var xb = mk('button', 'adx', '✕'); xb.type = 'button'; xb.title = 'Close'; xb.addEventListener('click', hideBanner);
+      banEl.appendChild(mk('span', 'adtag2', 'Ad')); banEl.appendChild(face); banEl.appendChild(xb);
+      box.appendChild(banEl);
+    }
+    if (adCta) {                                   // 3) a button that stays on the video, also while it plays
+      cta = mk('button', 'adcta'); cta.type = 'button'; cta.style.background = adCta.bg;
+      cta.appendChild(document.createTextNode(adCta.t + ' ▸')); cta.appendChild(mk('i', '', 'Ad'));
+      cta.addEventListener('click', function (e) { e.stopPropagation(); openAd(adCta.u, 'btn'); });
+      box.appendChild(cta);
+    }
+    function startPreroll() {
+      if (!adPending || adRunning) return;
+      adRunning = true; adLayer.style.display = 'block';
+      if (eng.playing()) eng.pause();
+      adVid.muted = !!(cfg.ap || cfg.mt);
+      var pr = adVid.play(); if (pr && pr.catch) pr.catch(function () { finishAd(false); });
+      track('view', wid + '.ad-pre');
+    }
+    function finishAd(skipped) {                   // ad over (finished or skipped): the real clip starts now
+      if (!adRunning) return;
+      adRunning = false; adPending = false; adVid.pause(); adLayer.style.display = 'none';
+      if (skipped) track('click', wid + '.ad-pre-skip');
+      eng.seek(S0); ended = false; eng.play(); sync();
+    }
+    function adTick(t, playing) {
+      if (cta) {
+        cta.style.display = adRunning ? 'none' : '';
+        if (!adRunning && !ctaSeen) { ctaSeen = true; track('view', wid + '.ad-btn'); }
+      }
+      var now = Date.now();
+      if (banEl && !banDone && !adRunning && playing) {
+        if (!banShown && t - S0 >= adBan.a) { banShown = true; banLast = now; banEl.style.display = 'flex'; track('view', wid + '.ad-banner'); }
+        if (banShown) { banElapsed += now - banLast; banLast = now; if (banElapsed >= adBan.d * 1000) hideBanner(); }   // counts only while the video plays
+      } else if (banShown) banLast = now;
+    }
+
+    var eng;
+    if (yt) {                                     // ---- YouTube: its player, but with our own controls and a time fence
+      var holder = mk('div', 'yt'), inner = mk('div'); holder.appendChild(inner); box.appendChild(holder);
+      var shield = mk('div', 'shield'); box.appendChild(shield);
+      var pl = null, ready = false;
+      eng = {
+        play: function () { if (ready) pl.playVideo(); }, pause: function () { if (ready) pl.pauseVideo(); },
+        seek: function (t) { if (ready) pl.seekTo(t, true); }, time: function () { return ready ? pl.getCurrentTime() : S0; },
+        playing: function () { return ready && pl.getPlayerState() === 1; },
+        mute: function (b) { if (ready) { b ? pl.mute() : pl.unMute(); } }, muted: function () { return ready ? pl.isMuted() : false; },
+        rate: function () { return ready ? pl.getPlaybackRate() : 1; }
+      };
+      loadYT(function () {
+        pl = new YT.Player(inner, { videoId: yt, width: '100%', height: '100%',
+          playerVars: { controls: 0, disablekb: 1, fs: 0, modestbranding: 1, rel: 0, playsinline: 1, iv_load_policy: 3, start: Math.floor(S0), end: Math.ceil(E0), autoplay: (cfg.ap && !adPending) ? 1 : 0, mute: (cfg.ap || cfg.mt) ? 1 : 0, loop: 0 },
+          events: {
+            onReady: function () { ready = true; var d = pl.getDuration(); if (d > 1) E0 = Math.min(E0, d); /* no seekTo here: on a not-yet-started video it would START playing; the player is already cued at 'start' */ if (cfg.mt || cfg.ap) pl.mute(); if (cfg.ap) { if (adPending) startPreroll(); else pl.playVideo(); } sync(); },
+            onStateChange: function (e) { if (e.data === 0) atEnd(); sync(); },
+            onError: function () { showError(); }
+          } });
+      });
+      setInterval(sync, 150);
+    } else {                                      // ---- a media file (mp4 / webm / mp3 / m4a / ogg / wav ...)
+      var media = document.createElement(isAudio ? 'audio' : 'video');
+      media.preload = 'auto'; media.playsInline = true; media.disablePictureInPicture = true; media.setAttribute('controlslist', 'nodownload noplaybackrate');
+      media.muted = !!(cfg.mt || cfg.ap);
+      media.addEventListener('contextmenu', function (e) { e.preventDefault(); });
+      media.src = cfg.m + (cfg.m.indexOf('#') < 0 ? '#t=' + S0 + ',' + E0 : '');   // the browser itself also starts at s and stops at e
+      eng = {
+        play: function () { var p = media.play(); if (p && p.catch) p.catch(function () {}); }, pause: function () { media.pause(); },
+        seek: function (t) { try { media.currentTime = t; } catch (e) {} }, time: function () { return media.currentTime; },
+        playing: function () { return !media.paused && !media.ended; },
+        mute: function (b) { media.muted = b; }, muted: function () { return media.muted; },
+        rate: function () { return media.playbackRate || 1; }
+      };
+      box.insertBefore(media, box.firstChild);
+      media.addEventListener('loadedmetadata', function () {
+        var d = media.duration;
+        if (isFinite(d) && d > 0) { E0 = Math.min(E0, d); S0 = Math.min(S0, Math.max(0, E0 - 0.1)); }
+        eng.seek(S0); sync();
+        if (cfg.ap) { if (adPending) startPreroll(); else eng.play(); }
+      });
+      ['timeupdate', 'play', 'pause', 'seeked', 'volumechange'].forEach(function (n) { media.addEventListener(n, sync); });
+      media.addEventListener('ended', function () { atEnd(); sync(); });
+      media.addEventListener('error', showError);
+      media.addEventListener('click', toggle);
+      setInterval(sync, 100);
+    }
+    box.appendChild(big); if (cfg.ct) box.appendChild(ctl);
+    if (adLayer) box.appendChild(adLayer);
+
+    function showError() { if (!box.querySelector('.msg')) box.appendChild(mk('div', 'msg', 'This media could not be loaded.')); }
+    function span() { return Math.max(0.1, E0 - S0); }
+    function atEnd() {                            // reached the end of the clip: loop, or stop (nothing after e is ever played)
+      if (cfg.lp) { eng.seek(S0); eng.play(); } else { eng.pause(); eng.seek(Math.max(S0, E0 - 0.05)); ended = true; }
+    }
+    function sync() {
+      var t = eng.time(), playing = eng.playing();
+      if (playing && t >= E0 - 0.04) { atEnd(); t = eng.time(); playing = eng.playing(); }
+      else if (t < S0 - 0.3 || t > E0 + 0.3) { t = Math.min(Math.max(t, S0), Math.max(S0, E0 - 0.05)); eng.seek(t); }   // outside the clip: pull back in
+      var f = Math.min(1, Math.max(0, (t - S0) / span()));
+      seek.value = Math.round(f * 1000); tm.textContent = fmtTime(t - S0) + ' / ' + fmtTime(span());
+      bPlay.textContent = playing ? '⏸' : (ended ? '↻' : '▶'); big.style.display = playing ? 'none' : 'flex'; bigIn.textContent = ended ? '↻' : '▶';
+      bMute.textContent = eng.muted() ? '🔇' : '🔊';
+      adTick(t, playing);
+      // a timer that fires right at the end of the clip, so not even a fraction of a second is played beyond it
+      clearTimeout(endTimer);
+      if (playing) endTimer = setTimeout(sync, Math.max(0, (E0 - t) / (eng.rate() || 1) * 1000 - 15));
+    }
+    function toggle() {
+      if (adRunning) return;
+      if (eng.playing()) { eng.pause(); }
+      else {
+        if (adPending) { track('click', wid); startPreroll(); return; }       // the ad plays first, the clip follows
+        if (ended || eng.time() >= E0 - 0.1 || eng.time() < S0) { eng.seek(S0); ended = false; }
+        eng.play(); track('click', wid);          // every press of Play counts as a click in the Monitor
+      }
+      setTimeout(sync, 50);
+    }
+    bPlay.addEventListener('click', toggle);
+    if (typeof shield !== 'undefined') shield.addEventListener('click', toggle);
+    seek.addEventListener('input', function () { if (adRunning) return; ended = false; eng.seek(S0 + seek.value / 1000 * span()); sync(); });
+    bMute.addEventListener('click', function () { eng.mute(!eng.muted()); sync(); });
+    bFs.addEventListener('click', function () { if (document.fullscreenElement) document.exitFullscreen(); else if (box.requestFullscreen) box.requestFullscreen(); });
+    box.addEventListener('keydown', function (e) {
+      if (adRunning) return;
+      if (e.key === ' ' || e.key === 'k') { e.preventDefault(); toggle(); }
+      else if (e.key === 'ArrowRight') { eng.seek(Math.min(E0 - 0.05, eng.time() + 5)); sync(); }
+      else if (e.key === 'ArrowLeft') { eng.seek(Math.max(S0, eng.time() - 5)); sync(); }
+    });
+    root.appendChild(box);
+    sync();
+    track('view', wid);
+  }
+
+  function render(cfg, root, hashId) {
+    if (cfg.t === 3) return renderMedia(cfg, root, hashId);
+    root.textContent = '';
+    var linked = cfg.u && cfg.t !== 1;                    // inputs can't be links
+    var tag = cfg.t === 1 ? 'input' : cfg.t === 0 ? 'button' : 'h2', el = document.createElement(tag);
+    var s = el.style;
+    s.height = cfg.h + 'px';
+    s.width = cfg.w ? cfg.w + 'px' : '100%';
+    s.backgroundColor = cfg.bg;
+    s.color = cfg.c;
+    s.borderRadius = cfg.r + 'px';
+    s.fontSize = cfg.f + 'px';
+    s.fontFamily = 'inherit';
+    s.boxSizing = 'border-box';
+    s.maxWidth = '100%';
+    if (cfg.b) s.fontWeight = '700';
+    var border = cfg.bw ? cfg.bw + 'px solid ' + cfg.bc : '0';
+    if (cfg.t === 1) { s.border = cfg.bw ? border : '1px solid rgba(100,116,139,.45)'; s.padding = '0 12px'; el.type = cfg.p ? 'password' : 'text'; el.placeholder = cfg.l; s.outline = 'none'; }
+    else {
+      s.border = border; el.textContent = cfg.l;
+      if (cfg.t === 0) { s.cursor = 'pointer'; if (tag === 'button') el.type = 'button'; }
+      else { s.margin = '0'; if (!cfg.b) s.fontWeight = '700'; s.overflow = 'hidden'; }
+      if (tag !== 'button') { s.display = 'flex'; s.alignItems = 'center'; if (cfg.t === 0) s.justifyContent = 'center'; }
+      if (cfg.t === 2) { s.justifyContent = cfg.a === 1 ? 'center' : cfg.a === 2 ? 'flex-end' : 'flex-start'; s.textAlign = cfg.a === 1 ? 'center' : cfg.a === 2 ? 'right' : 'left'; }
+    }
+    if (linked) {                                         // no href: the URL never shows on hover / status bar
+      s.cursor = 'pointer';
+      var go = function () {
+        if (/^screen:/i.test(cfg.u)) return;               // app-only link: nothing to do on the web
+        if (cfg.o) { try { window.top.location.href = cfg.u; } catch (e) { window.open(cfg.u, '_top'); } }
+        else window.open(cfg.u, '_blank', 'noopener,noreferrer');
+      };
+      el.addEventListener('click', go);
+      if (tag !== 'button') {
+        el.setAttribute('role', 'link'); el.tabIndex = 0;
+        el.addEventListener('keydown', function (e) { if (e.key === 'Enter') go(); });
+      }
+    }
+    if (cfg.hb && cfg.t !== 1) {
+      el.addEventListener('mouseenter', function () { s.backgroundColor = cfg.hb; });
+      el.addEventListener('mouseleave', function () { s.backgroundColor = cfg.bg; });
+    }
+    var wid = (hashId || '').replace(/^#/, '');
+    if (cfg.t !== 1) el.addEventListener('click', function () { track('click', wid); });
+    root.appendChild(el);
+    track('view', wid);
+  }
+
+  /* =====================================================================
+   * 4. ROUTER + IFRAME GUARD
+   * ===================================================================== */
+  var $ = function (id) { return document.getElementById(id); };
+  var framed = (function () { try { return window.self !== window.top; } catch (e) { return true; } })();
+  var routeToken = 0, dead = false;
+
+  // Direct visit with a widget hash: replace the whole document with a copy of the
+  // GitHub Pages "File not found" page; the address bar is left unchanged.
+  var NOT_FOUND_HTML = "<html><head>\n    <meta http-equiv=\"Content-type\" content=\"text/html; charset=utf-8\">\n    <title>Page not found · GitHub Pages<\/title>\n    <style type=\"text/css\" media=\"screen\">\n      body {\n        background-color: #f1f1f1;\n        margin: 0;\n        font-family: \"Helvetica Neue\", Helvetica, Arial, sans-serif;\n      }\n\n      .container { margin: 50px auto 40px auto; width: 600px; text-align: center; }\n\n      a { color: #4183c4; text-decoration: none; }\n      a:hover { text-decoration: underline; }\n\n      h1 { width: 800px; position:relative; left: -100px; letter-spacing: -1px; line-height: 60px; font-size: 60px; font-weight: 100; margin: 0px 0 50px 0; text-shadow: 0 1px 0 #fff; }\n      p { color: rgba(0, 0, 0, 0.5); margin: 20px 0; line-height: 1.6; }\n\n      ul { list-style: none; margin: 25px 0; padding: 0; }\n      li { display: table-cell; font-weight: bold; width: 1%; }\n\n      .logo { display: inline-block; margin-top: 35px; }\n      .logo-img-2x { display: none; }\n      @media\n      only screen and (-webkit-min-device-pixel-ratio: 2),\n      only screen and (   min--moz-device-pixel-ratio: 2),\n      only screen and (     -o-min-device-pixel-ratio: 2/1),\n      only screen and (        min-device-pixel-ratio: 2),\n      only screen and (                min-resolution: 192dpi),\n      only screen and (                min-resolution: 2dppx) {\n        .logo-img-1x { display: none; }\n        .logo-img-2x { display: inline-block; }\n      }\n\n      #suggestions {\n        margin-top: 35px;\n        color: #ccc;\n      }\n      #suggestions a {\n        color: #666666;\n        font-weight: 200;\n        font-size: 14px;\n        margin: 0 10px;\n      }\n\n    <\/style>\n  <\/head>\n  <body>\n\n    <div class=\"container\">\n\n      <h1>404<\/h1>\n      <p><strong>File not found<\/strong><\/p>\n\n      <p>\n        The site configured at this address does not\n        contain the requested file.\n      <\/p>\n\n      <p>\n        If this is your site, make sure that the filename case matches the URL\n        as well as any file permissions.<br>\n        For root URLs (like <code>http://example.com/<\/code>) you must provide an\n        <code>index.html<\/code> file.\n      <\/p>\n\n      <p>\n        <a href=\"https://help.github.com/pages/\">Read the full documentation<\/a>\n        for more information about using <strong>GitHub Pages<\/strong>.\n      <\/p>\n\n      <div id=\"suggestions\">\n        <a href=\"https://githubstatus.com\">GitHub Status<\/a> —\n        <a href=\"https://twitter.com/githubstatus\">@githubstatus<\/a>\n      <\/div>\n\n      <a href=\"/\" class=\"logo logo-img-1x\">\n        <img width=\"32\" height=\"32\" title=\"\" alt=\"\" src=\"data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAACAAAAAgCAYAAABzenr0AAAAGXRFWHRTb2Z0d2FyZQBBZG9iZSBJbWFnZVJlYWR5ccllPAAAAyRpVFh0WE1MOmNvbS5hZG9iZS54bXAAAAAAADw/eHBhY2tldCBiZWdpbj0i77u/IiBpZD0iVzVNME1wQ2VoaUh6cmVTek5UY3prYzlkIj8+IDx4OnhtcG1ldGEgeG1sbnM6eD0iYWRvYmU6bnM6bWV0YS8iIHg6eG1wdGs9IkFkb2JlIFhNUCBDb3JlIDUuMy1jMDExIDY2LjE0NTY2MSwgMjAxMi8wMi8wNi0xNDo1NjoyNyAgICAgICAgIj4gPHJkZjpSREYgeG1sbnM6cmRmPSJodHRwOi8vd3d3LnczLm9yZy8xOTk5LzAyLzIyLXJkZi1zeW50YXgtbnMjIj4gPHJkZjpEZXNjcmlwdGlvbiByZGY6YWJvdXQ9IiIgeG1sbnM6eG1wPSJodHRwOi8vbnMuYWRvYmUuY29tL3hhcC8xLjAvIiB4bWxuczp4bXBNTT0iaHR0cDovL25zLmFkb2JlLmNvbS94YXAvMS4wL21tLyIgeG1sbnM6c3RSZWY9Imh0dHA6Ly9ucy5hZG9iZS5jb20veGFwLzEuMC9zVHlwZS9SZXNvdXJjZVJlZiMiIHhtcDpDcmVhdG9yVG9vbD0iQWRvYmUgUGhvdG9zaG9wIENTNiAoTWFjaW50b3NoKSIgeG1wTU06SW5zdGFuY2VJRD0ieG1wLmlpZDpFMTZCRDY3REIzRjAxMUUyQUQzREIxQzRENUFFNUM5NiIgeG1wTU06RG9jdW1lbnRJRD0ieG1wLmRpZDpFMTZCRDY3RUIzRjAxMUUyQUQzREIxQzRENUFFNUM5NiI+IDx4bXBNTTpEZXJpdmVkRnJvbSBzdFJlZjppbnN0YW5jZUlEPSJ4bXAuaWlkOkUxNkJENjdCQjNGMDExRTJBRDNEQjFDNEQ1QUU1Qzk2IiBzdFJlZjpkb2N1bWVudElEPSJ4bXAuZGlkOkUxNkJENjdDQjNGMDExRTJBRDNEQjFDNEQ1QUU1Qzk2Ii8+IDwvcmRmOkRlc2NyaXB0aW9uPiA8L3JkZjpSREY+IDwveDp4bXBtZXRhPiA8P3hwYWNrZXQgZW5kPSJyIj8+SM9MCAAAA+5JREFUeNrEV11Ik1EY3s4+ddOp29Q5b0opCgKFsoKoi5Kg6CIhuwi6zLJLoYLopq4qsKKgi4i6CYIoU/q5iDAKs6syoS76IRWtyJ+p7cdt7sf1PGOD+e0c3dygAx/67ZzzPM95/877GYdHRg3ZjMXFxepQKNS6sLCwJxqNNuFpiMfjVs4ZjUa/pmmjeD6VlJS8NpvNT4QQ7mxwjSsJiEQim/1+/9lgMHgIr5ohuxG1WCw9Vqv1clFR0dCqBODElV6v90ogEDjGdYbVjXhpaendioqK07CIR7ZAqE49PT09BPL2PMgTByQGsYiZlQD4uMXtdr+JxWINhgINYhGT2MsKgMrm2dnZXgRXhaHAg5jEJodUAHxux4LudHJE9RdEdA+i3Juz7bGHe4mhE9FNrgwBCLirMFV9Okh5eflFh8PR5nK5nDabrR2BNJlKO0T35+Li4n4+/J+/JQCxhmu5h3uJoXNHPbmWZAHMshWB8l5/ipqammaAf0zPDDx1ONV3vurdidqwAQL+pEc8sLcAe1CCvQ3YHxIW8Pl85xSWNC1hADDIv0rIE/o4J0k3kww4xSlwIhcq3EFFOm7KN/hUGOQkt0CFa5WpNJlMvxBEz/IVQAxg/ZRZl9wiHA63yDYieM7DnLP5CiAGsC7I5sgtYKJGWe2A8seFqgFJrJjEPY1Cn3pJ8/9W1e5VWsFDTEmFrBcoDhZJEQkXuhICMyKpjhahqN21hRYATKfUOlDmkygrR4o4C0VOLGJKrOITKB4jijzdXygBKixyC5TDQdnk/Pz8qRw6oOWGlsTKGOQW6OH6FBWsyePxdOXLTgxiyebILZCjz+GLgMIKnXNzc49YMlcRdHXcSwxFVgTInQhC9G33UhNoJLuqq6t345p9y3eUy8OTk5PjAHuI9uo4b07FBaOhsu0A4Unc+T1TU1Nj3KsSSE5yJ65jqF2DDd8QqWYmAZrIM2VlZTdnZmb6AbpdV9V6ec9znf5Q7HjYumdRE0JOp3MjitO4SFa+cZz8Umqe3TCbSLvdfkR/kWDdNQl5InuTcysOcpFT35ZrbBxx4p3JAHlZVVW1D/634VRt+FvLBgK/v5LV9WS+10xMTEwtRw7XvqOL+e2Q8V3AYIOIAXQ26/heWVnZCVfcyKHg2CBgTpmPmjYM8l24GyaUHyaIh7XwfR9ErE8qHoDfn2LTNAVC0HX6MFcBIP8Bi+6F6cdW/DICkANRfx99fEYFQ7Nph5i/uQiA214gno7K+guhaiKg9gC62+M8eR7XsBsYJ4ilam60Fb7r7uAj8wFyuwM1oIOWgfmDy6RXEEQzJMPe23DXrVS7rtyD3Df8z/FPgAEAzWU5Ku59ZAUAAAAASUVORK5CYII=\">\n      <\/a>\n\n      <a href=\"/\" class=\"logo logo-img-2x\">\n        <img width=\"32\" height=\"32\" title=\"\" alt=\"\" src=\"data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAEAAAABACAYAAACqaXHeAAAAGXRFWHRTb2Z0d2FyZQBBZG9iZSBJbWFnZVJlYWR5ccllPAAAAyRpVFh0WE1MOmNvbS5hZG9iZS54bXAAAAAAADw/eHBhY2tldCBiZWdpbj0i77u/IiBpZD0iVzVNME1wQ2VoaUh6cmVTek5UY3prYzlkIj8+IDx4OnhtcG1ldGEgeG1sbnM6eD0iYWRvYmU6bnM6bWV0YS8iIHg6eG1wdGs9IkFkb2JlIFhNUCBDb3JlIDUuMy1jMDExIDY2LjE0NTY2MSwgMjAxMi8wMi8wNi0xNDo1NjoyNyAgICAgICAgIj4gPHJkZjpSREYgeG1sbnM6cmRmPSJodHRwOi8vd3d3LnczLm9yZy8xOTk5LzAyLzIyLXJkZi1zeW50YXgtbnMjIj4gPHJkZjpEZXNjcmlwdGlvbiByZGY6YWJvdXQ9IiIgeG1sbnM6eG1wPSJodHRwOi8vbnMuYWRvYmUuY29tL3hhcC8xLjAvIiB4bWxuczp4bXBNTT0iaHR0cDovL25zLmFkb2JlLmNvbS94YXAvMS4wL21tLyIgeG1sbnM6c3RSZWY9Imh0dHA6Ly9ucy5hZG9iZS5jb20veGFwLzEuMC9zVHlwZS9SZXNvdXJjZVJlZiMiIHhtcDpDcmVhdG9yVG9vbD0iQWRvYmUgUGhvdG9zaG9wIENTNiAoTWFjaW50b3NoKSIgeG1wTU06SW5zdGFuY2VJRD0ieG1wLmlpZDpEQUM1QkUxRUI0MUMxMUUyQUQzREIxQzRENUFFNUM5NiIgeG1wTU06RG9jdW1lbnRJRD0ieG1wLmRpZDpEQUM1QkUxRkI0MUMxMUUyQUQzREIxQzRENUFFNUM5NiI+IDx4bXBNTTpEZXJpdmVkRnJvbSBzdFJlZjppbnN0YW5jZUlEPSJ4bXAuaWlkOkUxNkJENjdGQjNGMDExRTJBRDNEQjFDNEQ1QUU1Qzk2IiBzdFJlZjpkb2N1bWVudElEPSJ4bXAuZGlkOkUxNkJENjgwQjNGMDExRTJBRDNEQjFDNEQ1QUU1Qzk2Ii8+IDwvcmRmOkRlc2NyaXB0aW9uPiA8L3JkZjpSREY+IDwveDp4bXBtZXRhPiA8P3hwYWNrZXQgZW5kPSJyIj8+hfPRaQAAB6lJREFUeNrsW2mME2UYbodtt+2222u35QheoCCYGBQligIJgkZJNPzgigoaTEj8AdFEMfADfyABkgWiiWcieK4S+QOiHAYUj2hMNKgYlEujpNttu9vttbvdw+chU1K6M535pt3ubHCSyezR+b73eb73+t7vrfXsufOW4bz6+vom9/b23ovnNNw34b5xYGAgODg46Mbt4mesVmsWd1qSpHhdXd2fuP/Afcput5/A88xwymcdBgLqenp6FuRyuWV4zu/v759QyWBjxoz5t76+/gun09mK5xFyakoCAPSaTCazNpvNPoYVbh6O1YKGRF0u13sNDQ27QMzfpiAAKj0lnU6/gBVfAZW2WWpwwVzy0IgP3G73FpjI6REhAGA9qVRqA1b9mVoBVyIC2tDi8Xg24+dUzQiAbS/s7Ox8G2o/3mKCC+Zw0efzPQEfcVjYrARX3dbV1bUtHo8fMgt42f+Mp0yUTVQbdWsAHVsikdiHkHaPxcQXQufXgUBgMRxme9U0AAxfH4vFvjM7eF6UkbJS5qoQwEQGA57Ac5JllFyUVZZ5ckUEgMVxsK2jlSYzI+QXJsiyjzNEAJyJAzb/KQa41jJKL8pODMQiTEAymXw5n8/P0IjD3bh7Rgog59aanxiIRTVvV/oj0tnHca/WMrVwODwB3raTGxzkBg/gnZVapFV62Wy2n5AO70HM/5wbJ0QnXyQSaVPDIuNZzY0V3ntHMwxiwHA0Gj2Np7ecIBDgaDAYXKCQJM1DhrgJ3nhulcPbl8j4NmHe46X/g60fwbz3aewjkqFQaAqebWU1AOqyQwt8Id6qEHMc97zu7u7FGGsn7HAiVuosVw7P35C1nccdgSCxop1dHeZswmfHMnxBo6ZTk+jN8dl/vF7vWofDsa+MLN9oEUBMxOb3+1eoEsBVw6Zmua49r8YmhAKDiEPcMwBsxMiqQ+ixzPFxZyqRpXARG/YOr1ObFJ0gUskXBbamcR1OKmMUvDxHRAu8/LmY3jFLMUpFqz9HxG65smYJdyKyECOxDiEAe/p1gjF2oonivZAsxVgl2daa4EQWCW6J55qFAFFZiJWYLxNQy2qOSUzGRsyXCUDIeliwAHEO4WSlWQBRFoZakXcKmCXmyXAKs0Ve9vl8q42WoIYpJU4hV3hKcNs8m9gl7p/xQ73eF5kB4j5mNrWmTJRNwAzqiV1CxjVTZCIkEq+Z1bZFZSN2CenmVAFVy4Plz8xKAGWjjAKFk6lCBMDR/MJjLLMSQNm43xAiQKTaA+9/wewhDjL+JVI1kkTSSOTcKbMTwPqESAot6dn6Fr1gHwVJju6IRuyiByPuUUBAg5DGkAgBmxlvdgIEK9gDkohdY/BJo4CAG0R8miRSsGABkgVQs4KXu098IgUXSSRsFAoKZiVAVDY2WUiiPTjYRi41KwGisrGsLtlsth8Fiwnz2fBkQvWfRtlE3iF2yW63/yCacXZ1dW02GwGyTFaRd4idJnCKHRaCxYRHoG5LTKT6SyiToP1fJHbmAYPYRR0UnZQtMnA6s0zg+GZBlt0Gdo7EPHgpE3Q6nZ8YyLhc8Xj8MJh/aKTAY+5FPAKHLE7RdwuYJZmNwzyCMkBCYyKROJBMJl9B/PXXCjjmCmDOVzH3fiPpObEWGqoKe4EBl8v1hlqsdLvd23mkxHM9pc9kMpmno9HoeTii7ewbHEZPPx1ztLS1tV3AnGuMjiNjvbQFuHw6zDo5By7dTPAQNBgMLrRarTkSls1mnwT7uwp9virx9QzbW/HuV/j5d/b+6jniKlllP8lkeONJDk+dq9GsQTnC4fB1heO0K47Hwe7WdDr9nAKgXwOBwHI+C45Htj1d6sd429TUNEcmUdc+PRaLHcvn87dXW4ugzdsaGxufL94NFv9zi1J7GVbhlvb2dnaJ3SVrxfc+n2+NTsZ7/H7/Mr3g5XdSIHyJSH1PZ+7fToyl2+ErqilgZ4NaLYB9goVGaHjR93Hv1ZrU4XDsFT20kH3PObzbWk0CgG1jacVIUnAQb9F+VexyLMzkpcLv0IJV7AHQIOCAUYHx7v5qgScmYHtTqSAyZLEJTK22Bie4iq3xsqpm4SAf9Hq9a2DnJ4uLK3SEULcdRvp3i3zHySqpficxEdsQc1NrlYXXvR+O7qASSezXB+h1SuUomgg9LL8BUoV4749EIolKh+EiqWmqVEZlDgHks2pxHw7xTqUQw9J5NcAXOK10AGIoZ6Zli6JY6Z1Q461KoZ4NiKLHarW+KDsxlDUPHZ5zPQZqUVDPJsTqb5n9malbpAh8C2XXDLl62+WZIDFRUlNVOiwencnNU3aQEkL+cDMSoLvZo2fQB7AJssNAuFuvorlDVVkkg2I87+jo2K2QAVphDrfyViK5VqtO34OkaxXCp+7drdDBCAdubm6eidX+2WwqT5komwh4YQLk+H4aE93h8Xg2gvHekQZOGSgLZTLyDTLJ4Lx9/KZWKBSainT4Iy3FqQBfnUZR42PKQFksBr9QKVXCPusD3OiA/RkQ5kP8qV/Jl1WywAp/6+dcmPM2zL1UrUahe4JqfnWWKXIul3uUbfP8njAFLW1OFr3gdFtZ72cNH+PtQT7/brW+NXqJAHh0y9V8/U/A1U7AfwIMAD7mS3pCbuWJAAAAAElFTkSuQmCC\">\n      <\/a>\n    <\/div>\n\n\n<\/body><\/html>\n";
+  function showNotFound() {
+    dead = true;
+    document.documentElement.innerHTML = NOT_FOUND_HTML; // (document.write is ignored while the page is still parsing)
+  }
+
+  async function route() {
+    if (dead) return;
+    var token = ++routeToken, hash = location.hash;
+    var hasHash = hash.length > 1;
+    $('builder').hidden = hasHash; $('widget').hidden = true; 
+    document.body.classList.toggle('render', hasHash);
+    if (!hasHash) { initBuilder(); return; }
+
+    if (!framed) { showNotFound(); return; } // direct browsing: look like a missing page
+    var cfg = await parseHash(hash);
+    if (token !== routeToken) return; // a newer hashchange superseded this one
+    $('widget').hidden = false;
+    if (cfg) render(cfg, $('widget'), hash); else $('widget').textContent = ''; // invalid -> render nothing
+    document.title = 'Widget';
+  }
+
+  /* =====================================================================
+   * 5. BUILDER
+   * ===================================================================== */
+  // Public URL every generated link / embed points at.
+  var BASE_URL = 'https://epicproject.github.io/newapp/';
+  /* ---- passcode lock for the builder page (widgets and the Android app are not affected) ---- */
+  // Set with: python tools/set_passcode.py "your passcode"   (null = no lock). Only a salted PBKDF2 hash is stored here.
+  var LOCK = { salt: 'edae38037a98412d9829d25c1d34bd13', hash: '795cb8d08597425656fb38327ecfaf46b6efe00bcf79b145ac592377bbda4a0d', iter: 200000 };
+  function lockToken() { return LOCK ? LOCK.hash : ''; }
+  function isUnlocked() {
+    if (!LOCK) return true;
+    try { return localStorage.getItem('hw_lock') === lockToken() || sessionStorage.getItem('hw_lock') === lockToken(); } catch (e) { return false; }
+  }
+  async function lockDigest(pass) {
+    var key = await crypto.subtle.importKey('raw', new TextEncoder().encode(pass), 'PBKDF2', false, ['deriveBits']);
+    var salt = new Uint8Array(LOCK.salt.match(/../g).map(function (h) { return parseInt(h, 16); }));
+    var bits = await crypto.subtle.deriveBits({ name: 'PBKDF2', hash: 'SHA-256', salt: salt, iterations: LOCK.iter }, key, 256);
+    return Array.prototype.map.call(new Uint8Array(bits), function (b) { return ('0' + b.toString(16)).slice(-2); }).join('');
+  }
+  var lockWired = false;
+  function lockInit() {
+    if (isUnlocked()) { $('lock').hidden = true; return; }
+    $('lock').hidden = false;
+    setTimeout(function () { $('lockPass').focus(); }, 50);
+    if (lockWired) return; lockWired = true;
+    $('lockForm').addEventListener('submit', async function (e) {
+      e.preventDefault();
+      var btn = $('lockBtn'), msg = $('lockMsg');
+      btn.disabled = true; msg.textContent = '';
+      var ok = false;
+      try { ok = (await lockDigest($('lockPass').value)) === LOCK.hash; } catch (err) { msg.textContent = 'This browser cannot check the passcode (needs https).'; btn.disabled = false; return; }
+      if (ok) {
+        try { ($('lockRemember').checked ? localStorage : sessionStorage).setItem('hw_lock', lockToken()); } catch (err) {}
+        $('lockPass').value = ''; $('lock').hidden = true;
+      } else {
+        msg.textContent = 'Wrong passcode.'; $('lockPass').select();
+      }
+      btn.disabled = false;
+    });
+  }
+
+  var ready = false;
+  function initBuilder() {
+    document.title = 'Hash Widget Generator';
+    lockInit();
+    $('baseUrl').textContent = BASE_URL;
+    monInit();
+    mediaInit();
+    if (ready) { update(); return; }
+    ready = true;
+    ['type','label','h','w','r','f','bg','bgT','fg','usePreview','url','tgt','bold','bw','bc','hb','hbT','ta','pw'].forEach(function (id) {
+      $(id).addEventListener('input', update); $(id).addEventListener('change', update);
+    });
+    // Paste only an ID (or any widget URL/hash) -> form fills and every output rebuilds.
+    $('idIn').addEventListener('input', async function () {
+      var v = $('idIn').value.trim(), i = v.indexOf('#'); if (i >= 0) v = v.slice(i);
+      var cfg = await parseHash(v); if (!cfg) return;
+      if (cfg.t === 3) { mediaLoadCfg(cfg); return; }
+      $('type').value = cfg.t; $('label').value = cfg.l; $('h').value = cfg.h; $('w').value = cfg.w;
+      $('r').value = cfg.r; $('f').value = cfg.f; $('fg').value = cfg.c;
+      $('bgT').checked = cfg.bg === 'transparent'; if (cfg.bg !== 'transparent') $('bg').value = cfg.bg;
+      $('ta').value = cfg.a; $('pw').checked = !!cfg.p;
+      $('url').value = cfg.u; $('tgt').value = cfg.o; $('bold').checked = !!cfg.b; $('bw').value = cfg.bw; $('bc').value = cfg.bc;
+      $('hbT').checked = !!cfg.hb; if (cfg.hb) $('hb').value = cfg.hb;
+      update();
+    });
+    document.querySelectorAll('button.copy').forEach(function (b) {
+      b.addEventListener('click', function () {
+        var ta = $(b.dataset.c); ta.select();
+        (navigator.clipboard ? navigator.clipboard.writeText(ta.value) : Promise.reject()).catch(function () { document.execCommand('copy'); });
+        var old = b.textContent; b.textContent = 'Copied'; setTimeout(function () { b.textContent = old; }, 1000);
+      });
+    });
+    update();
+  }
+
+  function readForm() {
+    return sanitize({
+      t: $('type').value, l: $('label').value, h: $('h').value, w: $('w').value, r: $('r').value, f: $('f').value,
+      bg: $('bgT').checked ? 'transparent' : $('bg').value, c: $('fg').value,
+      u: $('url').value, o: $('tgt').value, b: $('bold').checked, bw: $('bw').value, bc: $('bc').value,
+      hb: $('hbT').checked ? $('hb').value : '', a: $('ta').value, p: $('pw').checked
+    });
+  }
+
+  var updToken = 0;
+  async function update() {
+    var token = ++updToken, cfg = readForm();
+    ['h','w','r','f','bw'].forEach(function (id) { $(id).nextElementSibling.textContent = $(id).value + 'px'; });
+    $('hb').disabled = !$('hbT').checked;
+    $('bg').disabled = $('bgT').checked;
+
+    var local = location.origin + location.pathname + location.search; // preview uses the page you are on
+    var z = '#' + await encodeCompressed(cfg), s = '#' + encodeShort(cfg);
+    if (token !== updToken) return;
+
+    var zUrl = BASE_URL + z, sUrl = BASE_URL + s;
+    $('outId').value = s;
+    $('outZ').value = zUrl; $('outS').value = sUrl;
+
+    var q = decodeShort(encodeShort(cfg));
+    $('qnote').textContent = 'Short code rounds values: ' + q.h + '×' + (q.w || 'auto') + 'px, radius ' + q.r + 'px, font ' + q.f + 'px, bg ' + q.bg + ', text ' + q.c + '.' +
+      (cfg.o || cfg.b || cfg.bw || cfg.hb || cfg.a || cfg.p ? ' Same-window link, bold, border, hover, text align and password are only kept in the compressed URL.' : '');
+
+    // Embed size: use the widget's own size (auto width -> 300px).
+    var ew = cfg.w || 300, eh = cfg.h + (cfg.t === 1 ? 4 : 0);
+    var useShort = $('usePreview').value === 's', src = useShort ? sUrl : zUrl;
+    $('outE').value = '<iframe src="' + src.replace(/"/g, '&quot;') + '" width="' + ew + '" height="' + eh + '" frameborder="0" scrolling="no"></iframe>';
+
+    var pv = $('preview'); pv.width = ew; pv.height = eh;
+    var pvSrc = local + (useShort ? s : z);
+    if (pv.getAttribute('src') !== pvSrc) pv.setAttribute('src', pvSrc);
+  }
+
+  /* =====================================================================
+   * 6. MONITOR: live click / view counter
+   * ===================================================================== */
+  var MON_KEY = 'hw_monitor_v1';
+  var mon = { open: false, timer: null, seq: 0, data: null, fetchedAt: 0, prev: {}, flash: {}, labels: {}, feed: [], paused: false, filter: '', state: 'off', started: false };
+  function monCfg() {
+    var s = {}; try { s = JSON.parse(localStorage.getItem(MON_KEY)) || {}; } catch (e) {}
+    return { url: String(s.url || ANALYTICS_URL || '').replace(/\/+$/, ''), key: String(s.key || '') };
+  }
+  function monSaveCfg(url, key) { try { localStorage.setItem(MON_KEY, JSON.stringify({ url: url, key: key })); } catch (e) {} }
+  function esc(x) { return String(x == null ? '' : x).replace(/[&<>"']/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; }); }
+  function nowMs() { return mon.data ? mon.data.now + (Date.now() - mon.fetchedAt) : Date.now(); }
+  function ago(ms) {
+    if (!ms) return '-';
+    var s = Math.max(0, Math.round((nowMs() - ms) / 1000));
+    if (s < 5) return 'just now'; if (s < 60) return s + 's ago'; if (s < 3600) return Math.floor(s / 60) + 'm ago';
+    if (s < 86400) return Math.floor(s / 3600) + 'h ago'; return Math.floor(s / 86400) + 'd ago';
+  }
+  async function monLabel(id) {
+    if (mon.labels[id]) return mon.labels[id];
+    var am = /^(.*)\.(ad-pre-skip|ad-pre|ad-banner|ad-btn)$/.exec(id);       // an ad shown inside a media clip
+    if (am) { var base = await monLabel(am[1]); return (mon.labels[id] = { t: 4, l: 'Ad: ' + AD_NAME[am[2]] + ' in ' + base.l }); }
+    var cfg = null; try { cfg = await parseHash('#' + id); } catch (e) {}
+    return (mon.labels[id] = cfg ? { t: cfg.t, l: cfg.t === 3 && cfg.k === 'i' ? (cfg.l || cfg.m.split('/').pop().split('?')[0] || 'picture') + '  [picture part]' : cfg.t === 3 ? (cfg.l || cfg.m.split('/').pop().split('?')[0] || 'media clip') + '  ' + fmtTime(cfg.s) + '–' + fmtTime(cfg.e) : (cfg.l || '(no text)') } : { t: -1, l: '(unknown widget)' });
+  }
+  var TYPE_NAME = ['Button', 'Input', 'Heading', 'Media', 'Ad'];
+  var AD_NAME = { 'ad-pre': 'video ad', 'ad-pre-skip': 'video ad skipped', 'ad-banner': 'banner ad', 'ad-btn': 'button ad' };
+  function monSetState(state, text) {
+    mon.state = state;
+    var pill = $('monState'), btn = $('monBtn');
+    pill.textContent = text; pill.className = 'pill' + (state === 'live' ? ' live' : state === 'bad' ? ' bad' : '');
+    btn.classList.toggle('live', state === 'live'); btn.classList.toggle('err', state === 'bad');
+  }
+  function monShowSetup(msg) {
+    var c = monCfg();
+    $('monSetup').hidden = false; $('monLive').hidden = true;
+    $('monUrl').value = c.url; $('monKey').value = c.key; $('monMsg').textContent = msg || '';
+  }
+  function monShowLive() { $('monSetup').hidden = true; $('monLive').hidden = false; }
+
+  async function monTick() {
+    clearTimeout(mon.timer);
+    var c = monCfg();
+    if (!c.url || !c.key) { monSetState('off', 'Not connected'); return; }
+    try {
+      var r = await fetch(c.url + '/stats?since=' + mon.seq, { headers: { Authorization: 'Bearer ' + c.key }, cache: 'no-store' });
+      if (r.status === 401) { monSetState('bad', 'Wrong key'); if (mon.open) monShowSetup('That admin key was refused.'); return; }
+      if (r.status === 503) { monSetState('bad', 'Key not set on server'); if (mon.open) monShowSetup('The server has no ADMIN_KEY yet (npx wrangler secret put ADMIN_KEY).'); return; }
+      if (!r.ok) throw new Error('HTTP ' + r.status);
+      var d = await r.json();
+      if (d.seq < mon.seq) { mon.seq = 0; mon.feed = []; mon.prev = {}; return monTick(); }   // server data was reset
+      mon.fetchedAt = Date.now();
+      d.widgets.forEach(function (w) {
+        var p = mon.prev[w.id];
+        if (p && (w.clicks > p.clicks || w.views > p.views)) mon.flash[w.id] = Date.now();
+        mon.prev[w.id] = { clicks: w.clicks, views: w.views };
+      });
+      mon.seq = d.seq; mon.data = d;
+      d.events.slice().reverse().forEach(function (e) { mon.feed.unshift(e); });
+      mon.feed = mon.feed.slice(0, 40);
+      await Promise.all(d.widgets.slice(0, 100).map(function (w) { return monLabel(w.id); }).concat(mon.feed.map(function (e) { return monLabel(e.id); })));
+      monSetState('live', 'Live');
+      var b = $('monBadge'); b.hidden = false; b.textContent = d.total.clicks;
+      if (mon.open) { monShowLive(); monRender(); }
+    } catch (e) {
+      monSetState('bad', 'Offline, retrying');
+    }
+    mon.timer = setTimeout(monTick, mon.open && !mon.paused ? 1500 : (mon.open ? 4000 : 10000));
+  }
+
+  function topHost(w) {
+    var best = '', score = -1;
+    Object.keys(w.hosts || {}).forEach(function (h) { var sc = w.hosts[h].clicks * 1e6 + w.hosts[h].views; if (sc > score) { score = sc; best = h; } });
+    return best;
+  }
+  function monRender() {
+    var d = mon.data; if (!d) return;
+    var ctr = d.total.views ? (d.total.clicks / d.total.views).toFixed(2) : '-';
+    $('monTiles').innerHTML = [['Clicks', d.total.clicks], ['Views', d.total.views], ['Clicks per view', ctr], ['Widgets', d.total.widgets]]
+      .map(function (t) { return '<div class="tile"><b>' + esc(t[1]) + '</b><span>' + t[0] + '</span></div>'; }).join('');
+    var f = mon.filter.toLowerCase(), now = Date.now();
+    var rows = d.widgets.filter(function (w) {
+      if (!f) return true;
+      var lab = mon.labels[w.id] ? mon.labels[w.id].l : '';
+      return (lab + ' ' + w.id + ' ' + Object.keys(w.hosts).join(' ')).toLowerCase().indexOf(f) >= 0;
+    }).slice(0, 100).map(function (w) {
+      var lab = mon.labels[w.id] || { t: -1, l: '' };
+      var chips = Object.keys(w.hosts).sort(function (a, b) { return w.hosts[b].clicks - w.hosts[a].clicks || w.hosts[b].views - w.hosts[a].views; }).slice(0, 4)
+        .map(function (h) { return '<span class="chip" title="clicks / views">' + esc(h) + ' ' + w.hosts[h].clicks + '/' + w.hosts[h].views + '</span>'; }).join('');
+      var cls = mon.flash[w.id] && now - mon.flash[w.id] < 1500 ? ' class="flash"' : '';
+      var shortId = w.id.length > 26 ? w.id.slice(0, 26) + '…' : w.id;
+      return '<tr' + cls + '><td><div class="wlabel">' + esc(lab.l) + (lab.t >= 0 ? ' <span class="chip">' + TYPE_NAME[lab.t] + '</span>' : '') + '</div><div class="wid">' + esc(shortId) + '</div><div>' + chips + '</div>' +
+        '<div style="margin-top:4px"><button class="rowbtn" data-load="' + esc(w.id) + '">Open in builder</button><button class="rowbtn" data-copy="' + esc(w.id) + '">Copy ID</button><button class="rowbtn" data-reset="' + esc(w.id) + '">Reset</button></div></td>' +
+        '<td class="n big">' + w.clicks + '</td><td class="n">' + w.views + '</td><td class="n">' + (w.views ? (w.clicks / w.views).toFixed(2) : '-') + '</td><td>' + esc(ago(w.lastClick)) + '<br><span class="wid">' + esc(topHost(w)) + '</span></td></tr>';
+    }).join('');
+    $('monRows').innerHTML = rows || '<tr><td colspan="5" style="color:var(--mut);padding:16px 6px">No widget has been viewed yet. Embed one and open the page: it shows up here within a second or two.</td></tr>';
+    $('monFeed').innerHTML = mon.feed.map(function (e) {
+      var lab = mon.labels[e.id] ? mon.labels[e.id].l : e.id.slice(0, 12);
+      return '<div><span class="k ' + e.k + '">' + e.k + '</span> ' + esc(lab) + ' <span style="color:var(--mut)">from ' + esc(e.h) + ' · ' + esc(ago(e.t)) + '</span></div>';
+    }).join('') || '<div style="color:var(--mut)">Waiting for activity…</div>';
+  }
+
+  function monOpen(show) {
+    mon.open = show; $('mon').hidden = !show;
+    if (!show) return;
+    var c = monCfg();
+    if (!c.url || !c.key) { monShowSetup(''); monSetState('off', 'Not connected'); }
+    else { monShowLive(); if (mon.data) monRender(); monTick(); }
+  }
+  function monInit() {
+    if (mon.started) return; mon.started = true;
+    $('monBtn').addEventListener('click', function () { monOpen(!mon.open); });
+    $('monClose').addEventListener('click', function () { monOpen(false); });
+    $('monSettingsBtn').addEventListener('click', function () { monShowSetup(''); });
+    $('monSave').addEventListener('click', function () {
+      var url = $('monUrl').value.trim().replace(/\/+$/, ''), key = $('monKey').value.trim();
+      if (!/^https?:\/\//i.test(url)) { $('monMsg').textContent = 'Enter the full address, starting with https://'; return; }
+      if (!key) { $('monMsg').textContent = 'Enter your admin key.'; return; }
+      monSaveCfg(url, key); mon.seq = 0; mon.data = null; mon.prev = {}; mon.feed = []; $('monMsg').textContent = '';
+      monShowLive(); monSetState('off', 'Connecting…'); monTick();
+    });
+    $('monFilter').addEventListener('input', function (e) { mon.filter = e.target.value; monRender(); });
+    $('monPause').addEventListener('click', function (e) { mon.paused = !mon.paused; e.target.textContent = mon.paused ? 'Resume' : 'Pause'; monSetState(mon.paused ? 'off' : 'live', mon.paused ? 'Paused' : 'Live'); if (!mon.paused) monTick(); });
+    var armed = {};
+    function confirmClick(btn, label, action) {
+      if (armed[label]) { clearTimeout(armed[label]); armed[label] = null; action(); return; }
+      var old = btn.textContent; btn.textContent = 'Sure?';
+      armed[label] = setTimeout(function () { armed[label] = null; btn.textContent = old; }, 3000);
+    }
+    function reset(id) {
+      var c = monCfg();
+      fetch(c.url + '/reset' + (id ? '?id=' + encodeURIComponent(id) : ''), { method: 'POST', headers: { Authorization: 'Bearer ' + c.key } })
+        .then(function () { mon.seq = 0; mon.prev = {}; mon.feed = []; if (id) delete mon.flash[id]; monTick(); });
+    }
+    $('monResetAll').addEventListener('click', function (e) { confirmClick(e.target, 'all', function () { e.target.textContent = 'Reset all'; reset(''); }); });
+    $('monRows').addEventListener('click', function (e) {
+      var b = e.target.closest('button'); if (!b) return;
+      if (b.dataset.load) { monOpen(false); $('idIn').value = '#' + b.dataset.load; $('idIn').dispatchEvent(new Event('input')); window.scrollTo(0, 0); }
+      else if (b.dataset.copy) { try { navigator.clipboard.writeText(b.dataset.copy); b.textContent = 'Copied'; } catch (err) {} }
+      else if (b.dataset.reset) confirmClick(b, b.dataset.reset, function () { reset(b.dataset.reset); });
+    });
+    document.addEventListener('keydown', function (e) { if (e.key === 'Escape' && mon.open) monOpen(false); });
+    // keep the button's number fresh even while the panel is closed
+    var c = monCfg(); if (c.url && c.key) monTick();
+    setInterval(function () { if (mon.open && mon.data) monRender(); }, 1000);   // "3s ago" keeps counting
+  }
+
+  /* =====================================================================
+   * 7. MEDIA CLIP BUILDER
+   * ===================================================================== */
+  var AUDIO_EXT = /\.(mp3|m4a|aac|ogg|oga|opus|wav|flac)(\?|#|$)/i;
+  var media = { timer: null, wired: false, duration: 0, local: '' };
+  function parseTime(v) {
+    v = String(v).trim().replace(',', '.'); if (!v) return NaN;
+    var p = v.split(':').map(Number); if (p.some(function (x) { return !isFinite(x) || x < 0; }) || p.length > 3) return NaN;
+    return p.reduce(function (a, x) { return a * 60 + x; }, 0);
+  }
+  function timeText(t) { var m = Math.floor(t / 60), s = (t % 60); var ss = (Math.round(s * 10) / 10).toString(); if (s < 10) ss = '0' + ss; return m + ':' + ss; }
+  function repoParts() { var m = /^https:\/\/([^.]+)\.github\.io\/([^\/]+)\//i.exec(BASE_URL); return m ? { owner: m[1], repo: m[2] } : null; }
+
+  // ---- picture crop state: the chosen part, as fractions of the picture
+  var pic = { x: 0.1, y: 0.1, w: 0.8, h: 0.8, nw: 0, nh: 0, pending: null, drag: null };
+  var IMG_EXT = /\.(png|jpe?g|gif|webp|avif|bmp|svg)(\?|#|$)/i;
+  function kindFor(url, mime) { return IMG_EXT.test(url) || /^image\//.test(mime || '') ? 'i' : (AUDIO_EXT.test(url) || /^audio\//.test(mime || '') ? 'a' : 'v'); }
+  function cropRatio() { var v = $('mRatio').value; if (v === 'free') return 0; var q = v.split(':'); return q[0] / q[1]; }
+  function normCrop() {
+    pic.w = Math.min(1, Math.max(0.02, pic.w)); pic.h = Math.min(1, Math.max(0.02, pic.h));
+    pic.x = Math.min(Math.max(0, pic.x), 1 - pic.w); pic.y = Math.min(Math.max(0, pic.y), 1 - pic.h);
+  }
+  function applyRatio() {                          // keep the width, set the height for the chosen shape (shrink if it does not fit)
+    var r = cropRatio(); if (!r || !pic.nw) return;
+    pic.h = pic.w * pic.nw / r / pic.nh;
+    if (pic.h > 1) { pic.h = 1; pic.w = pic.h * pic.nh * r / pic.nw; }
+    normCrop();
+  }
+  function drawCrop() {
+    var b = $('mCropBox');
+    b.style.left = pic.x * 100 + '%'; b.style.top = pic.y * 100 + '%'; b.style.width = pic.w * 100 + '%'; b.style.height = pic.h * 100 + '%';
+    $('mCropInfo').textContent = pic.nw ? 'Shown part: ' + Math.round(pic.w * pic.nw) + ' × ' + Math.round(pic.h * pic.nh) + ' px of ' + pic.nw + ' × ' + pic.nh : '';
+  }
+  function resetCrop() {
+    var c = pic.pending; pic.pending = null;
+    if (c) { pic.x = c.x; pic.y = c.y; pic.w = c.w; pic.h = c.h; } else { pic.x = 0.1; pic.y = 0.1; pic.w = 0.8; pic.h = 0.8; applyRatio(); }
+    drawCrop();
+  }
+  function mediaKindUI() {
+    var isImg = $('mKind').value === 'i';
+    Array.prototype.forEach.call($('mTabs').children, function (b) { b.classList.toggle('on', b.dataset.k === $('mKind').value); b.disabled = $('mKind').disabled && b.dataset.k !== 'v'; });
+    $('mImgBox').hidden = !isImg; $('mTimeBox').hidden = isImg; $('mOptsBox').hidden = isImg;
+    if (isImg) $('mHelperWrap').hidden = true;
+    var vbox = $('aVon').closest('.adbox'); vbox.hidden = isImg;      // no video ad on a picture
+  }
+  function mediaLoadImage(src) {
+    var im = $('mImg'); pic.nw = pic.nh = 0; im.onload = function () { pic.nw = im.naturalWidth; pic.nh = im.naturalHeight; resetCrop(); mediaSoon(); };
+    im.onerror = function () { $('mMsg').className = 'hint'; $('mMsg').textContent = 'The browser could not open that picture here (wrong link, or the site blocks it).'; };
+    if (im.getAttribute('src') === src) { if (im.complete && im.naturalWidth) im.onload(); } else im.src = src;
+  }
+
+  function mediaCfg() {
+    var url = $('mUrl').value.trim();
+    var yt = ytId(url);
+    if (!yt && $('mKind').value === 'i') {         // ---- a picture: only the chosen part is shown
+      var aspect = pic.nw ? (pic.w * pic.nw) / (pic.h * pic.nh) : 0;
+      var w = parseInt($('mW').value, 10) || 480;
+      if ($('mAutoH').checked && aspect) $('mH').value = Math.max(40, Math.round(w / aspect));
+      var ic = { t: 3, m: url, s: 0, e: 30, k: 'i', ap: 0, lp: 0, mt: 0, ct: 0, w: w, h: parseInt($('mH').value, 10) || 320, r: parseInt($('mR').value, 10) || 0,
+        l: $('mTitle').value.trim(), ad: mediaAds(), crop: { x: pic.x, y: pic.y, w: pic.w, h: pic.h }, fit: $('mFit').value, lk: $('mLink').value.trim(), bg: $('mBg').value };
+      return ic;
+    }
+    var st = parseTime($('mStart').value), en = parseTime($('mEnd').value);
+    return { t: 3, m: url, s: isNaN(st) ? 0 : st, e: isNaN(en) ? (isNaN(st) ? 0 : st) + 30 : en, k: yt ? 'v' : $('mKind').value,
+      ap: $('mAuto').checked, lp: $('mLoop').checked, mt: $('mMute').checked, ct: $('mCtl').checked ? 1 : 0,
+      w: parseInt($('mW').value, 10) || 640, h: parseInt($('mH').value, 10) || 360, r: parseInt($('mR').value, 10) || 0, l: $('mTitle').value.trim(), ad: mediaAds() };
+  }
+  function mediaAds() {
+    var ad = {}, v = function (id) { return $(id).value.trim(); }, num = function (id, d) { var n = parseFloat(v(id).replace(',', '.')); return isFinite(n) ? n : d; };
+    if ($('aVon').checked && v('aVm') && $('mKind').value !== 'i') ad.v = { m: v('aVm'), u: v('aVu'), sk: num('aVs', 3) };
+    if ($('aBon').checked && (v('aBi') || v('aBt'))) ad.b = { i: v('aBi'), t: v('aBt'), u: v('aBu'), a: (function () { var t = parseTime(v('aBa')); return isNaN(t) ? 0 : t; })(), d: num('aBd', 8) };
+    if ($('aCon').checked && v('aCt')) ad.c = { t: v('aCt'), u: v('aCu'), bg: $('aCc').value };
+    return ad;
+  }
+  var mediaBusy = 0;
+  async function mediaUpdate() {
+    var token = ++mediaBusy, cfg = mediaCfg(), msg = $('mMsg'), yt = ytId(cfg.m);
+    var d = media.duration;
+    // keep the sliders and the length text in step with the numbers
+    $('mStartR').value = cfg.s; $('mEndR').value = cfg.e;
+    var isImg = cfg.k === 'i';
+    var len = isImg ? 1 : cfg.e - cfg.s;
+    if (isImg) $('mLen').innerHTML = '';
+    else $('mLen').innerHTML = len > 0.05 ? 'Clip: <b>' + timeText(cfg.s) + '</b> to <b>' + timeText(cfg.e) + '</b> (' + timeText(len) + ' long)' + (d ? ' of ' + timeText(d) : '') : '';
+    var problems = [];
+    if (!cfg.m) problems.push('Enter a source link (or choose a file).');
+    else if (!safeMedia(cfg.m) && !media.local) problems.push('Use an https:// link, or a path on this site such as media/clip.mp4.');
+    if (!isImg && !(len > 0.1)) problems.push('End must be after start.');
+    if (isImg && cfg.lk && !safeLink(cfg.lk)) problems.push('The click link must be an http(s) address.');
+    if (!isImg && d && cfg.e > d + 0.05) problems.push('End is after the end of the file (' + timeText(d) + ').');
+    if ($('aVon').checked && !$('aVm').value.trim()) problems.push('Video ad: enter the ad video link, or untick it.');
+    if ($('aVon').checked && $('aVm').value.trim() && !safeMedia($('aVm').value)) problems.push('Video ad: use an https:// link to a video file.');
+    if ($('aBon').checked && !$('aBi').value.trim() && !$('aBt').value.trim()) problems.push('Banner ad: add an image link or some text, or untick it.');
+    if ($('aBon').checked && $('aBi').value.trim() && !safeMedia($('aBi').value)) problems.push('Banner ad: use an https:// image link.');
+    if ($('aCon').checked && !$('aCt').value.trim()) problems.push('Button ad: enter the button text, or untick it.');
+    ['aVu', 'aBu', 'aCu'].forEach(function (id) { var on = { aVu: 'aVon', aBu: 'aBon', aCu: 'aCon' }[id]; if ($(on).checked && $(id).value.trim() && !safeLink($(id).value)) problems.push('An ad link must be an http(s) address.'); });
+    if ($('aCon').checked && !$('aCu').value.trim()) problems.push('Button ad: add the link it opens.');
+    msg.className = 'hint' + (problems.length ? '' : ' mgood'); msg.textContent = problems.length ? problems[0] : 'Ready: copy the link or the embed code below.';
+    if (problems.length || media.local) {
+      // preview only; the shareable outputs need a real address
+    }
+    if (problems.length) { ['mOutUrl', 'mOutId', 'mOutE', 'mOutJs'].forEach(function (i) { $(i).value = ''; }); return; }
+    var previewCfg = Object.assign({}, cfg, { m: media.local || cfg.m });   // preview the local file until it is uploaded
+    var id = (await encodeCompressed(cfg)).replace(/^#/, '');
+    var pid = (await encodeCompressed(previewCfg)).replace(/^#/, '');
+    if (token !== mediaBusy) return;
+    var w = cfg.w, h = cfg.h, url = BASE_URL + '#' + id;
+    $('mOutUrl').value = url; $('mOutId').value = id;
+    $('mOutE').value = '<iframe src="' + url + '" width="' + w + '" height="' + h + '" frameborder="0" scrolling="no" allow="autoplay; fullscreen" allowfullscreen></iframe>';
+    $('mOutJs').value = '<div data-hash-widget="' + id + '" data-width="' + w + '" data-height="' + h + '"></div>\n<script src="' + BASE_URL + 'embed.js"><\/script>';
+    var pv = $('mPreview'); pv.width = Math.min(w, 560); pv.height = Math.round(h * Math.min(w, 560) / w);
+    var src = location.origin + location.pathname + '?blob=1#' + pid;
+    if (pv.getAttribute('data-src') !== src) { pv.setAttribute('data-src', src); pv.src = src; }
+  }
+  function mediaSoon() { clearTimeout(media.timer); media.timer = setTimeout(mediaUpdate, 250); }
+
+  // audio gets a slim player strip, video a 16:9 picture (only while the size is still one of the two defaults)
+  function mediaFitSize() {
+    if ($('mKind').value === 'i' && $('mW').value === '640') $('mW').value = 480;
+    if ($('mKind').value === 'a' && $('mH').value === '360') { $('mW').value = 420; $('mH').value = 72; }
+    if ($('mKind').value === 'v' && $('mH').value === '72') { $('mW').value = 640; $('mH').value = 360; }
+  }
+  function mediaLoadSource(url, isLocal, forceKind) {
+    var helper = $('mHelper'), wrap = $('mHelperWrap');
+    media.duration = 0;
+    var isYT = !!ytId(url);
+    $('mStartNow').hidden = $('mEndNow').hidden = isYT;           // no player to read the time from for YouTube links
+    if (isYT) { helper.onloadedmetadata = null; helper.onerror = null; wrap.hidden = true; $('mKind').disabled = true; $('mKind').value = 'v'; mediaKindUI(); helper.removeAttribute('src'); mediaSoon(); return; }   // (a late reply from the previous file must not change the times)
+    $('mKind').disabled = false;
+    if (!url) { wrap.hidden = true; return; }
+    var kind = forceKind || kindFor(url, isLocal); $('mKind').value = kind; mediaFitSize(); mediaKindUI();
+    if (kind === 'i') { helper.onloadedmetadata = null; helper.onerror = null; wrap.hidden = true; helper.removeAttribute('src'); mediaLoadImage(media.local || url); mediaSoon(); return; }
+    wrap.hidden = false; helper.src = url;
+    helper.onloadedmetadata = function () {
+      media.duration = helper.duration || 0;
+      var d = media.duration; if (d) { $('mStartR').max = d; $('mEndR').max = d; if (parseTime($('mEnd').value) > d || $('mEnd').dataset.auto !== '0') { $('mEnd').value = timeText(Math.min(d, parseTime($('mStart').value) + 30)); } }
+      mediaSoon();
+    };
+    helper.onerror = function () { $('mMsg').className = 'hint'; $('mMsg').textContent = 'The browser could not open that file here (wrong link, or the site blocks it).'; };
+  }
+  function mediaLoadCfg(cfg) {
+    $('mUrl').value = cfg.m; media.local = ''; $('mUpBox').hidden = true;
+    $('mStart').value = timeText(cfg.s); $('mEnd').value = timeText(cfg.e); $('mEnd').dataset.auto = '0';
+    $('mKind').value = cfg.k; if (cfg.k === 'i') { pic.pending = cfg.crop; $('mFit').value = cfg.fit; $('mLink').value = cfg.lk || ''; $('mBg').value = cfg.bg || '#000000'; $('mAutoH').checked = false; } $('mAuto').checked = !!cfg.ap; $('mLoop').checked = !!cfg.lp; $('mMute').checked = !!cfg.mt; $('mCtl').checked = !!cfg.ct;
+    $('mTitle').value = cfg.l; $('mW').value = cfg.w; $('mH').value = cfg.h; $('mR').value = cfg.r;
+    var ad = cfg.ad || {};
+    $('aVon').checked = !!ad.v; if (ad.v) { $('aVm').value = ad.v.m; $('aVu').value = ad.v.u; $('aVs').value = ad.v.sk; }
+    $('aBon').checked = !!ad.b; if (ad.b) { $('aBi').value = ad.b.i; $('aBt').value = ad.b.t; $('aBu').value = ad.b.u; $('aBa').value = timeText(ad.b.a); $('aBd').value = ad.b.d; }
+    $('aCon').checked = !!ad.c; if (ad.c) { $('aCt').value = ad.c.t; $('aCu').value = ad.c.u; $('aCc').value = ad.c.bg; }
+    adGroups();
+    mediaLoadSource(cfg.m, '', cfg.k);
+    $('mediaCard').scrollIntoView({ behavior: 'smooth', block: 'start' });
+    mediaSoon();
+  }
+  function adGroups() { [['aVon', 'aVf'], ['aBon', 'aBf'], ['aCon', 'aCf']].forEach(function (p) { $(p[1]).hidden = !$(p[0]).checked; }); }
+  function mediaInit() {
+    if (media.wired) return; media.wired = true;
+    ['aVon', 'aVm', 'aVu', 'aVs', 'aBon', 'aBi', 'aBt', 'aBu', 'aBa', 'aBd', 'aCon', 'aCt', 'aCu', 'aCc'].forEach(function (id) {
+      $(id).addEventListener('input', function () { adGroups(); mediaSoon(); });
+      $(id).addEventListener('change', function () { adGroups(); mediaSoon(); });
+    });
+    // ---- picture crop box: drag to move, drag a square to resize
+    var cb = $('mCropBox');
+    ['nw', 'n', 'ne', 'e', 'se', 's', 'sw', 'w'].forEach(function (h) {
+      var d = document.createElement('div'); d.className = 'ch'; d.dataset.h = h;
+      d.style.left = /w/.test(h) ? '0%' : /e/.test(h) ? '100%' : '50%'; d.style.top = /n/.test(h) ? '0%' : /s/.test(h) ? '100%' : '50%'; cb.appendChild(d);
+    });
+    cb.addEventListener('pointerdown', function (ev) {
+      var r = $('mImg').getBoundingClientRect(); if (!r.width) return;
+      try { cb.setPointerCapture(ev.pointerId); } catch (e) {}
+      pic.drag = { h: ev.target.dataset.h || '', x0: ev.clientX, y0: ev.clientY, o: { x: pic.x, y: pic.y, w: pic.w, h: pic.h }, dw: r.width, dh: r.height };
+      ev.preventDefault();
+    });
+    cb.addEventListener('pointermove', function (ev) {
+      var g = pic.drag; if (!g) return;
+      var dx = (ev.clientX - g.x0) / g.dw, dy = (ev.clientY - g.y0) / g.dh, o = g.o;
+      if (!g.h) { pic.x = o.x + dx; pic.y = o.y + dy; normCrop(); }
+      else {
+        var x1 = o.x, y1 = o.y, x2 = o.x + o.w, y2 = o.y + o.h;
+        if (/w/.test(g.h)) x1 = Math.min(o.x + dx, x2 - 0.02); if (/e/.test(g.h)) x2 = Math.max(o.x + o.w + dx, x1 + 0.02);
+        if (/n/.test(g.h)) y1 = Math.min(o.y + dy, y2 - 0.02); if (/s/.test(g.h)) y2 = Math.max(o.y + o.h + dy, y1 + 0.02);
+        x1 = Math.max(0, x1); y1 = Math.max(0, y1); x2 = Math.min(1, x2); y2 = Math.min(1, y2);
+        var r = cropRatio();
+        if (r && pic.nw) {                        // keep the chosen shape (fraction width = fraction height * r * nh / nw)
+          var k = r * pic.nh / pic.nw, ww, hh;
+          if (g.h === 'n' || g.h === 's') {       // top / bottom edge: height decides, centred horizontally
+            hh = y2 - y1; ww = hh * k;
+            if (ww > 1) { ww = 1; hh = ww / k; if (g.h === 'n') y1 = y2 - hh; else y2 = y1 + hh; }
+            var cx = o.x + o.w / 2; x1 = Math.min(Math.max(0, cx - ww / 2), 1 - ww); x2 = x1 + ww;
+          } else {                                // corner or side: width decides, the opposite corner stays put
+            ww = x2 - x1; hh = ww / k;
+            var room = /n/.test(g.h) ? y2 : 1 - y1;
+            if (hh > room) { hh = room; ww = hh * k; if (/w/.test(g.h)) x1 = x2 - ww; else x2 = x1 + ww; }
+            if (/n/.test(g.h)) y1 = y2 - hh; else y2 = y1 + hh;
+          }
+        }
+        pic.x = x1; pic.y = y1; pic.w = x2 - x1; pic.h = y2 - y1; if (!r) normCrop();
+      }
+      drawCrop(); mediaSoon();
+    });
+    var wrapEl = $('mCropWrap'), pen = null;      // draw a new box by dragging on the picture
+    wrapEl.addEventListener('pointerdown', function (ev) {
+      if (ev.target !== $('mImg') && ev.target !== wrapEl) return;
+      var r = $('mImg').getBoundingClientRect(); if (!r.width || !pic.nw) return;
+      try { wrapEl.setPointerCapture(ev.pointerId); } catch (e) {}
+      pen = { ax: Math.min(1, Math.max(0, (ev.clientX - r.left) / r.width)), ay: Math.min(1, Math.max(0, (ev.clientY - r.top) / r.height)) };
+      ev.preventDefault();
+    });
+    wrapEl.addEventListener('pointermove', function (ev) {
+      if (!pen) return;
+      var r = $('mImg').getBoundingClientRect();
+      var cx = Math.min(1, Math.max(0, (ev.clientX - r.left) / r.width)), cy = Math.min(1, Math.max(0, (ev.clientY - r.top) / r.height));
+      var sx = cx >= pen.ax ? 1 : -1, sy = cy >= pen.ay ? 1 : -1, ww = Math.max(0.02, Math.abs(cx - pen.ax)), hh = Math.max(0.02, Math.abs(cy - pen.ay));
+      var rt = cropRatio();
+      if (rt) {
+        var k = rt * pic.nh / pic.nw; hh = ww / k;
+        var roomW = sx > 0 ? 1 - pen.ax : pen.ax, roomH = sy > 0 ? 1 - pen.ay : pen.ay;
+        if (hh > roomH) { hh = roomH; ww = hh * k; } if (ww > roomW) { ww = roomW; hh = ww / k; }
+      }
+      pic.w = Math.min(ww, sx > 0 ? 1 - pen.ax : pen.ax); pic.h = Math.min(hh, sy > 0 ? 1 - pen.ay : pen.ay);
+      pic.x = sx > 0 ? pen.ax : pen.ax - pic.w; pic.y = sy > 0 ? pen.ay : pen.ay - pic.h;
+      drawCrop(); mediaSoon();
+    });
+    var endPen = function () { pen = null; };
+    wrapEl.addEventListener('pointerup', endPen); wrapEl.addEventListener('pointercancel', endPen);
+    $('mCropAll').addEventListener('click', function () { pic.x = 0; pic.y = 0; pic.w = 1; pic.h = 1; if (cropRatio()) applyRatio(); drawCrop(); mediaSoon(); });
+    Array.prototype.forEach.call($('mTabs').children, function (b) { b.addEventListener('click', function () {
+      if (b.disabled) return; $('mKind').value = b.dataset.k; $('mKind').dispatchEvent(new Event('input', { bubbles: true })); }); });
+    var endDrag = function () { pic.drag = null; };
+    cb.addEventListener('pointerup', endDrag); cb.addEventListener('pointercancel', endDrag);
+    ['mRatio', 'mFit', 'mLink', 'mBg', 'mAutoH'].forEach(function (id) { $(id).addEventListener('input', function () { if (id === 'mRatio') { applyRatio(); drawCrop(); } mediaSoon(); }); $(id).addEventListener('change', function () { mediaSoon(); }); });
+    $('mCropDl').addEventListener('click', function () {   // a ready-cut copy of the picture: truly only that part, no rest to find
+      var im = $('mImg'); if (!im.naturalWidth) { $('mCropInfo').textContent = 'Load a picture first.'; return; }
+      var sx = pic.x * im.naturalWidth, sy = pic.y * im.naturalHeight, sw = pic.w * im.naturalWidth, sh = pic.h * im.naturalHeight;
+      var c = document.createElement('canvas'); c.width = Math.max(1, Math.round(sw)); c.height = Math.max(1, Math.round(sh));
+      try {
+        c.getContext('2d').drawImage(im, sx, sy, sw, sh, 0, 0, c.width, c.height);
+        c.toBlob(function (b) { var a = document.createElement('a'); a.href = URL.createObjectURL(b); a.download = 'picture-part.png'; document.body.appendChild(a); a.click(); a.remove(); setTimeout(function () { URL.revokeObjectURL(a.href); }, 3000); }, 'image/png');
+      } catch (e) { $('mCropInfo').textContent = 'This picture\'s website does not allow cutting it here. Choose the file from your computer instead.'; }
+    });
+    $('mediaBtn').addEventListener('click', function () { $('mediaCard').scrollIntoView({ behavior: 'smooth', block: 'start' }); $('mUrl').focus(); });
+    ['mStart', 'mEnd', 'mKind', 'mAuto', 'mLoop', 'mMute', 'mCtl', 'mTitle', 'mW', 'mH', 'mR'].forEach(function (id) { $(id).addEventListener('input', function () {
+      if (id === 'mEnd') $('mEnd').dataset.auto = '0';
+      if (id === 'mKind') { mediaFitSize(); mediaKindUI(); if ($('mKind').value === 'i' && !pic.nw && $('mUrl').value.trim()) mediaLoadImage(media.local || $('mUrl').value.trim()); }
+      mediaSoon();
+    }); });
+    $('mUrl').addEventListener('input', function () {
+      var wm = /^https?:\/\/[a-z.]*(?:wikipedia|wikimedia)\.org\/.*?(?:File|Image):([^#?&\s]+)/i.exec($('mUrl').value.trim());   // a Wikipedia "File:" page is a web page, not the picture: use its real image
+      if (wm) $('mUrl').value = 'https://commons.wikimedia.org/wiki/Special:FilePath/' + wm[1];
+      media.local = ''; $('mUpBox').hidden = true; delete $('mEnd').dataset.auto; mediaLoadSource($('mUrl').value.trim(), ''); mediaSoon(); });
+    $('mStartR').addEventListener('input', function () { $('mStart').value = timeText(+$('mStartR').value); mediaSoon(); });
+    $('mEndR').addEventListener('input', function () { $('mEnd').value = timeText(+$('mEndR').value); $('mEnd').dataset.auto = '0'; mediaSoon(); });
+    $('mStartNow').addEventListener('click', function () { var t = $('mHelper').currentTime || 0; $('mStart').value = timeText(t); if (parseTime($('mEnd').value) <= t) $('mEnd').value = timeText(t + 10); mediaSoon(); });
+    $('mEndNow').addEventListener('click', function () { $('mEnd').value = timeText($('mHelper').currentTime || 0); $('mEnd').dataset.auto = '0'; mediaSoon(); });
+    $('mFile').addEventListener('change', function () {
+      var f = $('mFile').files[0]; if (!f) return;
+      media.local = URL.createObjectURL(f);
+      var rp = repoParts(), name = encodeURIComponent(f.name);
+      var site = BASE_URL + 'media/' + name;
+      $('mUrl').value = site;
+      var box = $('mUpBox'); box.hidden = false;
+      box.innerHTML = '<b>' + f.name.replace(/[<>&]/g, '') + '</b> (' + (f.size / 1048576).toFixed(1) + ' MB) is loaded here for trimming. To use it on other websites it must be on the internet:<br>' +
+        '1. ' + (rp ? '<a target="_blank" rel="noopener" href="https://github.com/' + rp.owner + '/' + rp.repo + '/upload/main/media">Open GitHub upload page</a>' : 'Upload the file to your site\'s <code>media/</code> folder') +
+        ' and drop <b>' + f.name.replace(/[<>&]/g, '') + '</b> there (web upload limit 25 MB; bigger files with git), then press Commit.<br>' +
+        '2. After about a minute the source link below works. (Or paste any other https link.)';
+      var fk = kindFor(f.name, f.type); $('mKind').value = fk; $('mKind').disabled = false; mediaFitSize(); mediaKindUI();
+      if (fk === 'i') { $('mHelperWrap').hidden = true; mediaLoadImage(media.local); mediaSoon(); return; }
+      var helper = $('mHelper'); $('mHelperWrap').hidden = false; helper.src = media.local;
+      helper.onloadedmetadata = function () {
+        media.duration = helper.duration || 0; var d = media.duration;
+        if (d) { $('mStartR').max = d; $('mEndR').max = d; $('mStart').value = '0:00'; $('mEnd').value = timeText(Math.min(d, 30)); $('mEnd').dataset.auto = '0'; }
+        mediaSoon();
+      };
+      mediaSoon();
+    });
+    mediaSoon();
+  }
+
+  window.addEventListener('hashchange', route);
+  route();
+})();
+</script>
+</body>
+</html>

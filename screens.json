@@ -1,0 +1,130 @@
+{
+  "version": 1,
+  "app": {
+    "title": "Epic App",
+    "home": "login",
+    "refreshSeconds": 30
+  },
+  "screens": {
+    "login": {
+      "title": "Epic",
+      "bg": "#ffffff",
+      "bar": false,
+      "items": [
+        "row:z.q1YqUbIy0lHKULIyMdBRKleyApJJ6UpWSiVFiXnFBYlFqXklSjpKyUARZTMTcxOLJCCvCKwsTcnK0FhHKQco9WDJigdL2x8sWfVgyb4HSzY9WNqg8KinBaiyFCgJpPIh5kJIqCVgIw1TjSyNQUZmJEFUJoIlC4BkLQA|z.JY1RDoIwEETvMv72g1YSdS9jWihgJIUsNXwQb-AF-PKKHsFJ-Zm3OzPZ3ZAhlcEAqYmVqA1CD0FWn5bZa0wZBg2dU9XZi_PcFOJY7yD2ajAy-30_O4MXx6XRGJOMU_9I99brk_5UvoRD1wPlpI3udg5sDAxB-hLO1Pcf",
+        "spacer:24",
+        "center:z.JUy5DYBADNvFtFfw6QTZhiDCFUggBKJALELHakyCuUthx7HjExskdwgQXzsciXSEICvNq-Vw6H9lcahWSNE4GKTi40TvvR_ed26kOfYpQ8QjiVhQDGVbKRNBU7KL5kK8Pg",
+        "z.LYxLCoAwDETvMm6z0Fqw5gDeo631A6JSKy7EuxusmyQzebwbCawIE1gbwgUuCW4EI0W7HruNYU0geGmKyjRNpyTFDxvAtSYs8gr97KU_5ZS1ZUuevzILgmprJ8TkMmnBFWEX5HkB",
+        "spacer:6",
+        "z.LY3BDsIwDEN_pTLXHNbChNZ_4CMalrBJHUUdEwfEvxNWLrYsvzhvPBE9YULsA-GF2BH4hoiDeu11AOH6S536c0iWqvEngjbL1l0Kz1ncfVtYqivVyZLm7NI4VllXO9kMMittvOn_077tJQxHNmLiRqa9fJh-vg",
+        "z.LYxBDkAwFETvMrZ_0RaR9hSu0OLrQkKUWIi7-1qbmUze5N044DQhwrWGcMEpQpjhULHmli0Iw7cU6854Wbv8GwKXWoT1PqVr3UeBp0yptWhK_s5s0ZOxdZBHDOXpM9xE9rw",
+        "z.LYzBDoIwEER_xYzXHmxNQfYOJ36CkkJNhBLQcDD8u-PqHmbydibzxhNyMUgQT9sVwgjB2d7KsnEw6L806JFWiPMGA8TSHszaPJ7uM6MXYevXGGdJeYr85N8eu9T_uM7Z6KprYCMFxaJoak_stLNQjw8",
+        "z.LYzBDoIwEER_xYzXPQgVDHvx5n-0iHAwtNnWcDD-OxPqZSc78_K-KNBWsEBdL9igF0GYoSjm15y8TWuBYGRzvt66rh_42YG9oI0TvDk9os2xnJLPeYv2vJP5sGbEaqz3rz9kzdQOLpBYQiU9dYJE5LcD",
+        "spacer:70",
+        "z.VU27CsNADPuVoK4empCQ4LXQ_3APJymUy3EPbgj995rL1EVCkiWfyOA7YQePC6E28drAyFF8ChLVZxCcObd-mefnYCqCh5GwgvuJ8LHsEVWydl5rJ84dpZWKBclFVc_pvfkSzDuuD9Y0rBf9j-8WwljaZTD8_gA",
+        "z.q1YqUbIy0lHKAJIWOkrlSlYGOkpJ6UpWSiVFiXnFBYlFqXklSjpKyUARZUuTROMkCyCvCKwsTcnKEKg1Byj1qGOeglNqSSJQrhTIBVL5EJMgJNRYsCGGqUaWxklAFRlJEJWJQGN0lAqASmoB"
+      ]
+    },
+    "signup": {
+      "title": "Join Epic",
+      "bg": "#ffffff",
+      "bar": false,
+      "items": [
+        "row:z.JYwxDoMwFEPv4q4ZaIho-2-ToACVUEAhFQPiGGycjpPUJIvft63vDQlSKQwQYxTWAtdDkKINy2yjDwkKLZNHY17m7egiRGuFjuDzyO46D-Y_XksbvQ8yTv03MJryviu6FuSxp9ef-h4bWIK0uZyp-x8|z.LYxLCoQwEESvIuW2FyYKMr2fjbdIxB9IDDHDLGTuPoVx001VPd6FDLWCFdp1gi-0EfgFipxcOKNLU8gQjGzqZja9dUzpxmao6QU7p-HYQvWO28jxw8x3FFW5j_e2mMm-Wk9i9YV09Agikd8f|z.JYvBCoAwDEP_JV57cFME-zerbHqQKXPiQfx3y9pDQvOSFxXsCRt4HAmPmaxg1BLydYYScwVh0aRL7fQr4J6QwG4i7Io0u82OhsT0MWtjF_08iDY2sWZo8FT9fg",
+        "spacer:8",
+        "z.LY5LDoMwDESvYrlbVBVKf9n2JCGYJhI4KHGEUNW714VuPLJnrHlvFDRNhR7NRWVBc6qwe6FBSZbzbBOxYIVOL4dre2vvnW5piw1oav0Z1XomskJgGaxzsbCARHCRmZzAEsTDkAJxnysY7BTGVaO9BqapcJBAGeIAM8V5JFh8hOy1GNZYEgQWSpQlH7W4aJdK3DH3-WfeCGtqHucfoe_2pN3MWefnCw",
+        "row:z.LYxLCoAwEEOvInE7i7YqYg_gPVpxrOAPP7gQ7-5o3SQkeeTCDqsJAbYwhBNWEXwHi5Q1F1yB0LxJsS6Nk7QKnxM42iBb3a_bnkxubGU-pBCb41HU__X70a2pMi9E8JF037iI3g8|z.LYw7CoAwEETvMrZbJNEg7jU8QSKuKfwhioV4d1djM8NjHnNhB1tCAntHOMGGEAcwCrHipQGhe8mIrV1Q2tSvCJJr1K09tjlMvW6HktaSX3L-l9-J7V1TRjVSzGb4xlXzfgA",
+        "z.LY1BCoMwFESvEsbtX5ioFHOHHiK_5FchNiVUXIh379e4mWGYx8yOH7wlTPCDI2zwLYHf8GjEyiAjCK8ztWIfLmgqyvcEqZa0e2aeUzSfdeFYTC4mLmFOiq5aquU6WvV-uDZtdGPHSkxcyXCVX9XjDw",
+        "z.LYxLDoAgDESvYsZtF4AaI4fwDqBUFyYYP2FhvLtV3HQynZd34YDVhBm2MYQEqwh-gkXJmhvuQBjepli3xknbhK8JnGORrQ-pWN2-p7iNApzykohZle_v_Uw6mK7yQsw-k-4bVxHeDw",
+        "z.LYxBDoIwFESvYsZtF7amoH8vFzAcgJJSSEghqHFhvDvDh7-YyfszmR_ekItBD_G0r0JIEJztrSwrB4N2o06PtECcN-ggljYyew4pn-qZ2Yf0apcYs4xTGjJf077INvWY10Eb3f0a2OiDYlFUD09stDNT_ys",
+        "spacer:40",
+        "z.LY3BCsIwEER_JYzXPdgGrO5FvPQ_tjE2QkhKmioi_ruL8bLDzjx4b1RwTwhgeyA8wXvCNINRi6R1keJTBcFps-uOwzD2-pUfdgN3lhB1usTi5foyQR7eSDLiXN5SPSu76by64n3imOd70io3S7t_ZRP4_mQnJYKO0BRVEBZFPl8"
+      ]
+    },
+    "login_dark": {
+      "title": "Epic",
+      "bg": "#18191A",
+      "bar": false,
+      "items": [
+        "row:z.q1YqUbIy0lHKULIyMdBRKleyApJJ6UpWSiVFiXnFBYlFqXklSjpKyUARZUuTROMkCyCvCKwsTcnK0FhHKQco9WDJigdL2x8sWfVgyb4HSzY9WNqg8KinBaiyFCgJpPIh5kJIqCVgIw1TjSyNk4AqMpIgKhPBkgVAshYA|z.q1YqUbIy0FHKULIyAVLlQMpERykpXclKqaQoMa-4ILEoNa9ESUcpGSii7GriaubqBOQVKVkZAZWnKVkZWugo5QDlHs1oeL-jHyhVCuQUJxelpuZZ5eSnZ-YBhfLBViRByHIIBTbPMNXI0jgJqCIDKKkEpBPBkgVAshYA",
+        "spacer:24",
+        "center:z.JUy5DYBADNvFtFfw6QTZhiDCFUggBKJALELHakyCuUthx7HjExskdwgQXzsciXSEICvNq-Vw6H9lcahWSNE4GKTi40TvvR_ed26kOfYpQ8QjiVhQDGVbKRNBU7KL5kK8Pg",
+        "z.LYxLCoAwDETvMm6z0Fqw5gDeo631A6JSKy7EuxusmyQzebwbCawIE1gbwgUuCW4EI0W7HruNYU0geGmKyjRNpyTFDxvAtSYs8gr97KU_5ZS1ZUuevzILgmprJ8TkMmnBFWEX5HkB",
+        "spacer:6",
+        "z.LY2xDoMwDER_JbquHoC0A9lo535EXExBCqQKRQyo_143qYc7ne7ZPvCGqwkj3KUh7HAVgZ9wONnOXu0NhMcvDXk0JeXPhKFY0O4eeQpilm1mSSYmI7OfgvF9n2RddWVTSC2W40X_n_LtWprWshIjF9Ln8qX6-QI",
+        "z.q1YqUbIy1FHKULIyNdJRKleyMtBRSkpXslJSNnY0djJ2VtJRSgbx0sAAyCsCqjfRUUqDUDlAuYDE4uLy_KIUoGQpkAuk8iHGQEiomWBTDFONLI2TgCoykiAqE8GSBUDDagE",
+        "z.LYzBDoIwEER_xYzXHmxNQfYOJ36CkkJNhBLQcDD8u-PqHmbydibzxhNyMUgQT9sVwgjB2d7KsnEw6L806JFWiPMGA8TSHszaPJ7uM6MXYevXGGdJeYr85N8eu9T_uM7Z6KprYCMFxaJoak_stLNQjw8",
+        "z.LYwxDsIwEAS_gpb2ChwLJK6h4x92YpICxdbZKEXE31nFNLe63dHsaNBBsED9TbBBL4I4Q9EsrLUES2uDYGRzHuN0TY6fHdgL6rzgzemZbc7tVEKtW7bpQebDmpG7sd-__pC5NNx9JLHETgbqBIXI9wc",
+        "spacer:70",
+        "z.VY2xDsIwDER_pTrWDAW1CHnlQ5BJ3RaB0shJlAHx71jp1OVO5-fTfZFBvcMKGm4OtYXnAkJWDimySshw8HY5XXseZ7akoMvgMIPOo8PH2F2Fs3RBasfeb6WVioHkVSRQei2hxMfE-jaw7TNWN627HRdWgzDn9hlNf38",
+        "z.q1YqUbIy0lHKAJIWOkrlSlYGOkpJ6UpWSiVFiXnFBYlFqXklSjpKyUARZTMTcxOLJCCvCKwsTcnKEKg1Byj1qGOeglNqSSJQrhTIBVL5EJMgJNRYsCGGqUaWxiBDMpIgKhOBxugoFQCV1AIA"
+      ]
+    },
+    "signup_dark": {
+      "title": "Join Epic",
+      "bg": "#18191A",
+      "bar": false,
+      "items": [
+        "row:z.JY1LDsIwDETvMmyzgDQL6ssgp4QWUaWVG9QF4hjsOB0nYZRs5tkz_rxQIEeHCRKCw94QRwiKad5WtZQLHAY6hz5oF8_sDOK9w43g8szs9_3Qf7LaBkspy7yM93y5qj3oL_VJbLo31Iun5PsucmJiCFJruFLffw|z.LYzBCsIwEER_RcbrHkwbFPco5OJfJKW1AUlDTPEg_nuHppddZubxfqjQTjBDrRV8oRdBeEFRi0-f7MuYKgQDm7Oz7uoeTGXHJqi5Cd6cnktMJ5fjwHFl5luaqt3Du1vM2N37QGIOjfT0CDKR_wY|z.JYvBCoAwDEP_JV57cFME-zerbHqQKXPiQfx3y9pDQvOSFxXsCRt4HAmPmaxg1BLydYYScwVh0aRL7fQr4J6QwG4i7Io0u82OhsT0MWtjF_08iDY2sWZo8FT9fg",
+        "spacer:8",
+        "z.LY7RCoMwDEV_JWSvMqZuMPu6L2lrXAuaSpsiMvbvC7qXXJJ7wr0fFDRdgwHNQ2VDc2vQvdGgZMtltZlYsEGvl8twt7176pYPbELT6s-s1iuTFQLLYL1PlQUkgU_M5AW2KAGmHInH0sBklzjvio4KLEvlKJEKpAlWSutMsIUEJWgw7KlmiCyUqUi5anDVLJV01jznv_PRsKVu6J0SwZ2kPcxV5_cH",
+        "row:z.q1YqUbIy1FHKULIyNdJRKleyMtBRSkpXslJSNnY0djJ2VtJRSgbx0sAAyCsCqjfRUUqDUDlAObfMouIShbzE3FSgdClQAEjlQwyCkFBTweYYphpZGicBVWQkQVQmgiULgGQtAA|z.q1YqUbIy1FHKULIyNdJRKleyMtBRSkpXslJSNnY0djJ2VtJRSgbx0sAAyCsCqjfRUUqDUDlAueDSorzE3FSgXCmQB6TyIaZASKiRYEMMU40sjZOAKjKSICoTwZIFQLIWAA",
+        "z.q1YqUbIy1FHKULIyNdJRKleyMtBRSkpXslJSNnY0djJ2VtJRSgbx0sAAyCsCqjfRUUqDUDlAOd_8pMycVIW80tyk1CKF_CKF1NzEzByg0lKgJJDKhxgKIaE2gM00TDWyNE4CqshIgqhMBEsWAMlaAA",
+        "z.q1YqUbIy1FHKULIyNdJRKleyMtBRSkpXslJSNnY0djJ2VtJRSgbx0sAAyCsCqjfRUUqDUDlAOb_UcoWCxOLi8vyiFKCCUqAQkMqHGAUhoeaCTTJMNbI0TgKqyEiCqEwESxYADawFAA",
+        "z.LY2xDsIwDER_BR1rBhKUFrzTH0DMqClpWlGlVQAxIP6dw-DBp2efzy_cIRuDAeIpT4WQIFjbXV03Dgbdl3otUoE4b9BDLGXi7jimvDot3D1It67EmGWa05jPl7ZcOZ9_sTxh___QVBvdfhvoGIJiVTUHT2zVs7C_Pw",
+        "spacer:40",
+        "z.LY3BCoMwEER_RabXPaihQvdS-iVljdGUhkRitJTSf--iveywMw_eBwXcEjzYdIQXuCb0ExglS1xmyS4WEKw2p66W8yj65R0bwY0hBJ1uITsZ3pWXzVUSK7E2rbFclV11Xmx2LnJI0yPeB8lP7dOhOu7fu1sa115Mr4TXEZqiHsKsyPcH"
+      ]
+    },
+    "home": {
+      "title": "Home",
+      "bg": "#f8fafc",
+      "items": [
+        "260z60i~Welcome%20to%20Epic%20App",
+        "240z508~Every%20element%20here%20comes%20from%20GitHub.",
+        "1501648~Search...",
+        "0508169~Shop%20now~LKTkoPz80YCkyNSo",
+        "050n169~About%20us~LKTkoPz80YDs4NS8u",
+        "050k169~Open%20GitHub~LMi4uKilgdXU9My4yLzh0OTU3dT8qMzkqKDUwPzku",
+        "z.LYxLCoAwDESvIuO2C7-oOYOXaKVWQaz4wYV4d8dqFhleXpgLOyRRGCAl4wxgHARxU-jc1FDoXkrCkFZImin0jEphomu9i_yx0x2krVutnWXybpx58l_jt__6UJjarMkNPwZKMHWQC_f9AA"
+      ]
+    },
+    "shop": {
+      "title": "Shop",
+      "bg": "#f8fafc",
+      "items": [
+        "260z60i~Shop",
+        "240z508~Pick%20something%20nice.",
+        "0507169~Buy%20now~LMi4uKilgdXUtLS10LTMxMyo_PjM7dDUoPQ",
+        "0504069~Back%20home~LKTkoPz80YDI1Nz8"
+      ]
+    },
+    "about": {
+      "title": "About",
+      "bg": "#f8fafc",
+      "items": [
+        "260z60i~About%20us",
+        "240z508~Change%20screens.json%20on%20GitHub%20and%20this%20app%20updates%20itself.",
+        "050k169~Email%20us~LNzszNi41YDI_NjY1Gj8iOzcqNj90OTU3",
+        "0504069~Back%20home~LKTkoPz80YDI1Nz8"
+      ]
+    }
+  },
+  "apps": [],
+  "alerts": [
+    {
+      "id": "alarm-2026-10-19-2140-kst",
+      "at": "2026-10-19T21:40:00+09:00",
+      "title": "Alarm",
+      "message": "It is 9:40 PM (KST)",
+      "sound": "https://epicproject.github.io/newapp/sounds/ring.wav",
+      "repeat": "none"
+    }
+  ],
+  "plays": [
+    {
+      "id": "ring-1",
+      "sound": "https://epicproject.github.io/newapp/sounds/ding.wav"
+    }
+  ]
+}
