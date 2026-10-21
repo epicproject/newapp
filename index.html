@@ -739,6 +739,7 @@ npx wrangler deploy</pre>
               else if (HOLD) { warming = true; pl.mute(); pl.playVideo(); }      // held clip (the next one in the phone feed): start it silently so it is already buffered, then stop it again
               sync(); },
             onStateChange: function (e) {
+              if (e.data === 1) tellReady();
               if (warming && e.data === 1) { warming = false; if (wantPlay) { if (!MUTE0) pl.unMute(); } else { pl.pauseVideo(); pl.seekTo(S0, true); } }
               if (e.data === 0) atEnd(); sync();
             },
@@ -760,6 +761,7 @@ npx wrangler deploy</pre>
         rate: function () { return media.playbackRate || 1; }
       };
       box.insertBefore(media, box.firstChild);
+      media.addEventListener('loadeddata', tellReady);
       media.addEventListener('loadedmetadata', function () {
         var d = media.duration;
         if (isFinite(d) && d > 0) { E0 = Math.min(E0, d); S0 = Math.min(S0, Math.max(0, E0 - 0.1)); }
@@ -775,6 +777,8 @@ npx wrangler deploy</pre>
     box.appendChild(big); if (cfg.ct) box.appendChild(ctl);
     if (adLayer) box.appendChild(adLayer);
 
+    var readySent = false, lastProg = 0;
+    function tellReady() { if (FEED && !readySent) { readySent = true; try { parent.postMessage({ hwr: 1 }, '*'); } catch (e) {} } }
     function startNow() { if (adPending) startPreroll(); else eng.play(); }
     function showError() { if (!box.querySelector('.msg')) box.appendChild(mk('div', 'msg', 'This media could not be loaded.')); }
     function span() { return Math.max(0.1, E0 - S0); }
@@ -787,6 +791,7 @@ npx wrangler deploy</pre>
       if (playing && t >= E0 - 0.04) { atEnd(); t = eng.time(); playing = eng.playing(); }
       else if ((playing || !yt) && (t < S0 - 0.3 || t > E0 + 0.3)) { t = Math.min(Math.max(t, S0), Math.max(S0, E0 - 0.05)); eng.seek(t); }   // outside the clip: pull back in
       var f = Math.min(1, Math.max(0, (t - S0) / span()));
+      if (FEED && Date.now() - lastProg > 200) { lastProg = Date.now(); try { parent.postMessage({ hwp: f }, '*'); } catch (e) {} }
       seek.value = Math.round(f * 1000); tm.textContent = fmtTime(t - S0) + ' / ' + fmtTime(span());
       bPlay.textContent = playing ? '⏸' : (ended ? '↻' : '▶'); big.style.display = (playing || (FEED && !userPaused)) ? 'none' : 'flex'; bigIn.textContent = ended ? '↻' : '▶';
       bMute.textContent = eng.muted() ? '🔇' : '🔊';
