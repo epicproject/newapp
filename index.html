@@ -110,8 +110,10 @@
   .mp .big span { width: 64px; height: 64px; border-radius: 50%; background: rgba(0,0,0,.55); display: flex; align-items: center; justify-content: center; font-size: 26px; }
   .mp .msg { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; padding: 16px; text-align: center; background: rgba(0,0,0,.75); font-size: 14px; z-index: 5; }
   .mp .shield { position: absolute; inset: 0; z-index: 2; cursor: pointer; }
-  .mp .yt { position: absolute; inset: 0; }
-  .mp .yt iframe { width: 100%; height: 100%; border: 0; }
+  .mp .yt { position: absolute; inset: 0; overflow: hidden; }
+  /* YouTube draws its own title + channel picture along the top edge and a logo along the bottom edge of ITS frame.
+     The frame is made taller and moved up, so those bars fall outside our box (hidden) while the video stays exactly where it was. */
+  .mp .yt iframe { position: absolute; left: 0; top: -90px; width: 100%; height: calc(100% + 180px); border: 0; }
 
   /* ---------- media clip card (builder) ---------- */
   #mediaCard { grid-column: 2; }
